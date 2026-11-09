@@ -57,5 +57,4 @@ async function refreshEngineInfo() {
 }
 setInterval(refreshEngineInfo, 3000);
 
-probeIconFiles();
 setInterval(tick, 250);

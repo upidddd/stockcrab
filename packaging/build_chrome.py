@@ -46,8 +46,9 @@ manifest = {
         {"js": ["chrome/browser-shim.js"] + cs["js"], "matches": matches},
         {"js": ["chrome/page-fen.js"], "matches": chess_com, "world": "MAIN"},
     ],
-    "web_accessible_resources": [{"resources": r["resources"], "matches": r["matches"] + args.test_origin} for r in ff["web_accessible_resources"]],
 }
+if ff.get("web_accessible_resources"):
+    manifest["web_accessible_resources"] = [{"resources": r["resources"], "matches": r["matches"] + args.test_origin} for r in ff["web_accessible_resources"]]
 manifest = {k: v for k, v in manifest.items() if v is not None}
 json.dump(manifest, open(os.path.join(OUT, "manifest.json"), "w", encoding="utf-8"), indent=2)
 

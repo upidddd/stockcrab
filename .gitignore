@@ -6,6 +6,3 @@ web-ext-artifacts/
 *.log
 dist/
 
-# the original move icons stay on this machine only (they are not our artwork)
-src/stockcrab/icons/*
-!src/stockcrab/icons/README.md

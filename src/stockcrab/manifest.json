@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "StockCrab",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Stockfish move hints for chess.com and lichess.org: best and other good moves with scores, and a premove hint.",
   "icons": {
     "16": "assets/icon-16.png",
@@ -37,7 +37,6 @@
   "content_scripts": [
     {
       "js": [
-        "data/opening-book.js",
         "content/core/constants.js",
         "content/core/hold.js",
         "content/board/find.js",
@@ -45,34 +44,18 @@
         "content/board/orientation.js",
         "content/board/reader.js",
         "content/board/lichess.js",
+        "content/board/moves.js",
         "content/hints/draw.js",
-        "content/rating/kinds.js",
-        "content/hints/icons.js",
-        "content/rating/sacrifice.js",
-        "content/rating/book.js",
-        "content/rating/classify.js",
+        "content/hints/score.js",
         "content/hints/marks.js",
         "content/ui/status.js",
-        "content/rating/played-move.js",
+        "content/hints/show.js",
         "content/core/tick.js",
         "content/ui/panel.js",
         "content/core/main.js"
       ],
       "matches": [
         "https://www.chess.com/*",
-        "https://lichess.org/*",
-        "https://www.lichess.org/*"
-      ]
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "icons/*"
-      ],
-      "matches": [
-        "https://www.chess.com/*",
-        "https://chess.com/*",
         "https://lichess.org/*",
         "https://www.lichess.org/*"
       ]

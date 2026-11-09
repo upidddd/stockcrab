@@ -113,29 +113,15 @@ async function tick() {
 
   // "Whoever is to move" (analysis boards, puzzles, playing both sides): every position is mine
   const mine = settings.side === "turn" || fen.split(" ")[1] === myColour(board);
-  playedMark = settings.ratePlayed && settings.showRatings !== false && ratedFor && ratedFor.fen === fen ? ratedFor.mark : null;
   if (!keepAlive) {
     try {
       keepAlive = browser.runtime.connect();
       keepAlive.onDisconnect.addListener(() => (keepAlive = null));
     } catch (e) {}
   }
-  if (settings.ratePlayed && settings.showRatings !== false && lastMine && lastMine.fen !== fen) {
-    const mark = await ratePlayedMove(id, fen);
-    if (id !== requestId) return;
-    ratedFor = mark ? { fen, mark } : null;
-    playedMark = mark;
-    if (mark) show(board, [], true);
-  }
   if (!mine && !settings.premove) {
     setStatus("Opponent's turn");
     return;
-  }
-  if (mine && !(lastMine && lastMine.fen === fen)) {
-    // the value of my previous move counts only if the opponent's reply really is one move from that position
-    const prevPct = afterMine && inferPlayed(afterMine.fen, fen) ? afterMine.pct : null;
-    lastMine = { fen, res: null, prevPct }; // known from now on, even if I move before the hint is ready
-    afterMine = null;
   }
   setStatus(mine ? "Thinking…" : `Opponent's turn, checking for a ${settings.premoveMode === "safe" ? "safe " : ""}premove…`, "busy");
   let res;
@@ -146,8 +132,7 @@ async function tick() {
             type: "hint", id, fen,
             elo: settings.elo, movetime: settings.movetime, depth: settings.depth, hash: settings.hash,
             aggression: settings.aggression,
-            // "Great" (the only good move) needs a second line to compare with, so the labels ask for at least two
-            multipv: Math.max(1 + settings.others, settings.showRatings !== false && (settings.showIcon || settings.showQuality) ? 2 : 1),
+            multipv: 1 + settings.others,
           }
         : {
             type: "premove", id, fen,
@@ -178,7 +163,6 @@ async function tick() {
   if (!mine) {
     const marks = marksForPremove(res, fen);
     if (!marks.length) {
-      if (playedMark) show(board, [], false);
       const why = ["they have several good moves", "your reply needs thought"].includes(res.reason) ? res.reason : null;
       setStatus(
         settings.premoveMode === "smart" && why
@@ -199,7 +183,6 @@ async function tick() {
     return;
   }
   lastView = { mine, res, fen };
-  if (lastMine && lastMine.fen === fen) lastMine.res = res;
   const marks = marksForMyTurn(res, settings.others, fen);
   show(board, marks, true);
   setStatus(bestStatus(marks, res), "ok");

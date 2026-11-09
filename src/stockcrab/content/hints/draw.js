@@ -133,8 +133,7 @@ function drawMarks(board, marks, animate = false) {
     const from = squareRect(board, m.move.slice(0, 2), br);
     const to = squareRect(board, m.move.slice(2, 4), br);
     if (!from.w || !to.w) continue;
-    const played = m.kind === "played"; // the rating of the move I played: just the icon and the word, no outline or arrow
-    const col = played ? m.cls.colour : colourOf(m.kind);
+    const col = colourOf(m.kind);
     const sq = from.w;
     const alt = m.kind === "alt";
     const op = (alt ? 0.68 : 1) * (settings.opacity / 100);
@@ -144,7 +143,7 @@ function drawMarks(board, marks, animate = false) {
     const shape = svgEl("g", { opacity: op });
     svg.appendChild(shape);
 
-    if (settings.showOutline && !played) {
+    if (settings.showOutline) {
       const ow = sq * 0.04 * k;
       for (const r of [from, to]) {
         const outline = svgEl("rect", {
@@ -166,7 +165,7 @@ function drawMarks(board, marks, animate = false) {
     const tc = { x: to.x + to.w / 2, y: to.y + to.h / 2 };
     const len = Math.hypot(tc.x - fc.x, tc.y - fc.y);
     const arrowParts = []; // the polygons of this arrow (shaft and head), for the blur and to keep the card clear of it
-    if (len && !played) {
+    if (len) {
       const ux = (tc.x - fc.x) / len;
       const uy = (tc.y - fc.y) / len;
       const lw = (alt ? sq * 0.05 : sq * 0.075) * k;
@@ -219,12 +218,12 @@ function drawMarks(board, marks, animate = false) {
       }
     }
 
-    // What goes on the target cell next to the arrow: the icon of the kind of move and one compact card (the score on
-    // top, below it the kind of move: "Brilliant", "Great", "premove", and the cell's name if switched on). Both are
-    // placed in the last pass, once the card's size is known, in a corner of the cell the arrow does not touch.
+    // What goes on the target cell next to the arrow: one compact card (the score on top, below it "premove" and the
+    // cell's name if switched on). It is placed in the last pass, once its size is known, in a corner of the cell the
+    // arrow does not touch.
     const score = settings.showLabels && m.label ? m.label : "";
-    const words = [settings.showSquare && m.move.slice(2, 4), settings.showQuality && qualityText(m.cls, !settings.showIcon), m.kind === "premove" && "premove"].filter(Boolean).join(" · ");
-    const info = { to, sq, op, cls: settings.showIcon && m.cls ? m.cls : null, card: null };
+    const words = [settings.showSquare && m.move.slice(2, 4), m.kind === "premove" && "premove"].filter(Boolean).join(" · ");
+    const info = { to, sq, op, card: null };
     if (score || words) {
       const text = (str, fs, weight, extra = "") => {
         const t = svgEl("text", {
@@ -235,16 +234,14 @@ function drawMarks(board, marks, animate = false) {
         return t;
       };
       const card = svgEl("rect", { fill: col, opacity: Math.min(1, op + 0.05) });
-      // the rating of a played move has no score: its word is the whole card, so it is set like a score
-      const wordOnly = played && !score;
-      const t1 = score ? text(score, sq * (alt ? 0.125 : 0.14), 700) : wordOnly ? text(words, sq * 0.12, 700) : null;
-      const t2 = words && !wordOnly ? text(words, sq * 0.09, 500, "opacity:.92") : null;
+      const t1 = score ? text(score, sq * (alt ? 0.125 : 0.14), 700) : null;
+      const t2 = words ? text(words, sq * 0.09, 500, "opacity:.92") : null;
       svg.appendChild(card);
       if (t1) svg.appendChild(t1);
       if (t2) svg.appendChild(t2);
-      info.card = { card, t1, t2, fs1: wordOnly ? sq * 0.12 : sq * (alt ? 0.125 : 0.14), fs2: sq * 0.09 };
+      info.card = { card, t1, t2, fs1: sq * (alt ? 0.125 : 0.14), fs2: sq * 0.09 };
     }
-    if (info.cls || info.card) infos.push(info);
+    if (info.card) infos.push(info);
     allParts.push(...arrowParts);
   }
   if (blurLayer) {
@@ -302,7 +299,7 @@ function drawMarks(board, marks, animate = false) {
       k.total = w + k.padX * 2;
     }
     const layouts = [];
-    const corners = c.cls && k ? OPTIONS : c.cls ? [["", "TR"], ["", "BR"], ["", "TL"], ["", "BL"]] : [["TL", ""], ["BL", ""], ["BR", ""], ["TR", ""]];
+    const corners = [["TL", ""], ["BL", ""], ["BR", ""], ["TR", ""]];
     for (const [cc, ic, shrink = 1] of k ? corners.concat(corners.map(([a, b]) => [a, b, 0.8])) : corners) {
       let f = shrink; // a smaller card is the last resort when the arrow leaves little room
       let total = k ? k.total * f : 0;
@@ -364,16 +361,6 @@ function drawMarks(board, marks, animate = false) {
           if (el) animateIn(el, [{ opacity: 0, transform: "scale(0.6)", transformOrigin: origin }, { transform: "scale(1)", transformOrigin: origin }], 150, 170);
         }
       }
-    }
-    if (c.cls) {
-      const q = best.iconRect;
-      const cx = q.x + r;
-      const cy = q.y + r;
-      const icon = qualityIcon(c.cls, cx, cy, r);
-      icon.setAttribute("opacity", Math.min(1, c.op + 0.05));
-      svg.appendChild(icon);
-      blurShape(q.x, q.y, q.w, q.h, "border-radius:50%"); // exactly under the round icon
-      if (anim) animateIn(icon, [{ opacity: 0, transform: `translate(${cx}px, ${cy}px) scale(${r * 0.5})` }, { transform: `translate(${cx}px, ${cy}px) scale(${r})` }], 190, 160);
     }
   }
   current = { marks, size: `${Math.round(br.width)}x${Math.round(br.height)}` };

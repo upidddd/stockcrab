@@ -34,12 +34,7 @@ function listMoves(marks, animate = false) {
     const name = el("span", "nm");
     if (m.kind === "premove") name.append(el("span", "tag", "premove"));
     name.append(el("b", "san", m.san || m.move), el("span", "co", pretty(m.move)));
-    if (m.cls && settings.showIcon) {
-      const ic = el("span", "ic");
-      ic.innerHTML = `<svg viewBox="-1.08 -1.08 2.16 2.16" width="14" height="14">${iconMarkup(m.cls)}</svg>`;
-      name.insertBefore(ic, name.children[1] || null);
-    }
-    const det = [qualityText(m.cls, !settings.showIcon), m.detail].filter(Boolean).join(" · ");
+    const det = m.detail || "";
     if (det) name.append(el("span", "dt", det));
     const sc = el("span", "sc", m.label || "");
     sc.style.background = col;

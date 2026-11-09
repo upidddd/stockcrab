@@ -13,14 +13,11 @@ src/stockcrab/
 │   ├── core/               constants, hold tracker, settings, main loop, entry point
 │   ├── board/              finding the board and reading the position
 │   ├── hints/              turning engine answers into marks, and drawing them
-│   ├── rating/             the kinds of move and how a move is classified
 │   └── ui/                 the panel and its status line
 ├── background/             hosts the engine (an event page)
 │   ├── engine/             the registry, the search, the queue, boot and recovery
 │   └── premove/            premove analysis and the pawn-trade rule
-├── data/opening-book.js    7,981 opening positions (hashes) for the Book rating
-├── engine/                 Stockfish builds and their licences
-└── icons/                  optional: the user's own move icons
+└── engine/                 Stockfish builds and their licences
 ```
 
 ## Components
@@ -31,26 +28,22 @@ Names used in the README, in the code headers (the `//!` lines at the top of eve
 
 | # | Component | File | What it does |
 |---|---|---|---|
-| 1 | Opening book (data) | `data/opening-book.js` | the set of opening positions |
-| 2 | Constants | `content/core/constants.js` | panel id, mark class, logo, which site this is |
-| 3 | Hold tracker | `content/core/hold.js` | knows when a piece is in the user's hand |
-| 4 | Board finder | `content/board/find.js` | the game's board element |
-| 5 | Settings | `content/core/settings.js` | defaults, shared state, saving |
-| 6 | Orientation | `content/board/orientation.js` | which colour is at the bottom, which colour the user plays |
-| 7 | Board reader | `content/board/reader.js` | reads the position (chess.com), repairs the side to move, legality checks |
-| 8 | Lichess reader | `content/board/lichess.js` | reads the position from chessground |
-| 9 | Hint painter | `content/hints/draw.js` | arrows, outlines, cards, icons, the blur layer |
-| 10 | Rating kinds | `content/rating/kinds.js` | the kinds of move, their colours, the win-chance formula |
-| 11 | Icon kit | `content/hints/icons.js` | built-in vector icons and the user's icon files |
-| 12 | Sacrifice detector | `content/rating/sacrifice.js` | is a piece really given up (Brilliant) |
-| 13 | Opening book (rating) | `content/rating/book.js` | is the position after a move theory |
-| 14 | Move classifier | `content/rating/classify.js` | Great, Miss, the classifier, score text |
-| 15 | Mark builder | `content/hints/marks.js` | engine answer → marks to draw |
-| 16 | Status line and move list | `content/ui/status.js` | the line and the list in the panel |
-| 17 | Played-move rater | `content/rating/played-move.js` | rates the move the user just played; show and rerender |
-| 18 | Main loop | `content/core/tick.js` | every 250 ms: read, ask, draw; retry after a failure |
-| 19 | Panel | `content/ui/panel.js` | the settings panel (shadow DOM) |
-| 20 | Entry point | `content/core/main.js` | loads the saved settings, the hotkey, the timers |
+| 1 | Constants | `content/core/constants.js` | panel id, mark class, logo, which site this is |
+| 2 | Hold tracker | `content/core/hold.js` | knows when a piece is in the user's hand |
+| 3 | Board finder | `content/board/find.js` | the game's board element |
+| 4 | Settings | `content/core/settings.js` | defaults, shared state, saving |
+| 5 | Orientation | `content/board/orientation.js` | which colour is at the bottom, which colour the user plays |
+| 6 | Board reader | `content/board/reader.js` | reads the position (chess.com), repairs the side to move, legality checks |
+| 7 | Lichess reader | `content/board/lichess.js` | reads the position from chessground |
+| 8 | Move finder | `content/board/moves.js` | plays a move on a board map, finds which move led from one position to the next |
+| 9 | Hint painter | `content/hints/draw.js` | arrows, outlines, cards, the blur layer |
+| 10 | Score text | `content/hints/score.js` | how a score is written (pawns, centipawns, win chance) |
+| 11 | Mark builder | `content/hints/marks.js` | engine answer → marks to draw |
+| 12 | Status line and move list | `content/ui/status.js` | the line and the list in the panel |
+| 13 | Show and rerender | `content/hints/show.js` | draws and lists marks; redraws after a look setting changes |
+| 14 | Main loop | `content/core/tick.js` | every 250 ms: read, ask, draw; retry after a failure |
+| 15 | Panel | `content/ui/panel.js` | the settings panel (shadow DOM) |
+| 16 | Entry point | `content/core/main.js` | loads the saved settings, the hotkey, the timers |
 
 ### Background scripts, in load order
 
@@ -75,11 +68,9 @@ Names used in the README, in the code headers (the `//!` lines at the top of eve
 3. The loop sends a message to the **Message router**: `hint` (my turn) or `premove` (their turn).
 4. The router passes it to the **Search queue**, the **Search runner** talks UCI to the engine worker, the **UCI line builder**
    turns the engine's `info` lines into the answer, and the answer goes back.
-5. **Mark builder** makes marks out of it, **Move classifier** rates them, **Hint painter** draws them, and the **Panel** lists them.
-6. When the user then plays a move, **Played-move rater** works out which move it was from the two positions and rates it
-   (asking the router for a `rate` search if the move was not among the hint's lines).
+5. **Mark builder** makes marks out of it, **Hint painter** draws them, and the **Panel** lists them.
 
-Messages from the content scripts to the background: `status`, `engine` (switch model), `hint`, `premove`, `rate`.
+Messages from the content scripts to the background: `status`, `engine` (switch model), `hint`, `premove`.
 
 ## Adding or moving a file
 
@@ -108,7 +99,7 @@ An offscreen document can. Messages from the page reach both; the service worker
 If a message arrives before the engine host exists, it fails and the main loop asks again a moment later.
 
 The blur under the hints uses plain boxes (four bars for an outline, a turned bar for the shaft, slices for the head,
-rounded boxes for cards and icons), never `clip-path`: Chromium ignores `clip-path` on a `backdrop-filter` as soon as an
+rounded boxes for cards), never `clip-path`: Chromium ignores `clip-path` on a `backdrop-filter` as soon as an
 ancestor clips with rounded corners, and chess.com's board does.
 
 ## Packing

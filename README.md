@@ -7,7 +7,7 @@
 # <img src="src/stockcrab/assets/icon.svg" alt="" width="34" align="top"> StockCrab
 
 **Stockfish move hints, drawn right on the board, on chess.com and lichess.**<br>
-Best move, other good moves, a score for each, a rating for every move you play, and a premove while your opponent thinks.
+Best move, other good moves with a score for each, and a premove while your opponent thinks.
 
 <br>
 
@@ -17,7 +17,7 @@ Best move, other good moves, a score for each, a rating for every move you play,
 [![License](https://img.shields.io/badge/license-GPL--3.0-e4572e?style=flat-square&labelColor=262421)](LICENSE)
 [![Privacy](https://img.shields.io/badge/network%20requests-none-e4572e?style=flat-square&labelColor=262421)](#privacy)
 
-[**Install**](#install) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Move ratings](#move-ratings) &nbsp;·&nbsp; [Premoves](#premoves) &nbsp;·&nbsp; [Settings](#settings) &nbsp;·&nbsp; [Fair play](#fair-play) &nbsp;·&nbsp; [Intro video](docs/intro.mp4)
+[**Install**](#install) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Premoves](#premoves) &nbsp;·&nbsp; [Settings](#settings) &nbsp;·&nbsp; [Fair play](#fair-play) &nbsp;·&nbsp; [Intro video](docs/intro.mp4)
 
 [Русская версия](README.ru.md)
 
@@ -31,17 +31,16 @@ Best move, other good moves, a score for each, a rating for every move you play,
 <td width="50%"><img src="docs/premove.png" alt="A premove while the opponent thinks"></td>
 </tr>
 <tr>
-<td align="center"><sub>The best move and another good one, each with its score and rating</sub></td>
-<td align="center"><sub>Your move is rated, then a premove is shown while the opponent thinks</sub></td>
+<td align="center"><sub>The best move and other good ones, each with its score</sub></td>
+<td align="center"><sub>A premove is shown while the opponent thinks</sub></td>
 </tr>
 </table>
 
-> The screenshots, the banner and the intro video show the extension with a custom set of move icons. Those icon files are **not** part of this repository: out of the box StockCrab draws its own icons. See [`src/stockcrab/icons/`](src/stockcrab/icons/README.md) to use your own.
+> The screenshots, the banner and the intro video were made with an earlier version that also rated moves (Brilliant, Best, ...). That feature has been removed.
 
 ## Features
 
-- **Hints on the board.** An arrow and outlined squares for the best move, a compact card on the target square with its score and the kind of move, plus up to three other good moves, drawn thinner. Everything is translucent, with an optional blur under the arrows.
-- **Every move rated.** Hints carry a rating, and after you play, your own move is rated too: Brilliant, Great, Best, Excellent, Good, Inaccuracy, Mistake, Blunder, Book, Forced and Miss ([how](#move-ratings)).
+- **Hints on the board.** An arrow and outlined squares for the best move, a compact card on the target square with its score, plus up to three other good moves, drawn thinner. Everything is translucent, with an optional blur under the arrows.
 - **Premoves.** While your opponent thinks, StockCrab can show the reply worth premoving, in three styles, including a rule-based pawn retake ([how](#premoves)).
 - **You choose the opponent.** Strength from Elo 1320 up to full strength, think time, depth limit, hash size, and an optional aggression slider (it gives up a little strength for sharper play).
 - **Six engines.** Stockfish 19 (Full, Lite, JavaScript), Stockfish 17.1 (Full, Lite) and Stockfish 11 classic, with an automatic fallback if one does not start ([engines](#engines)).
@@ -84,28 +83,6 @@ The first start of the full network takes a few seconds (the panel says *startin
 | **Look** | colours, line width, opacity, blur, which parts to draw, animations, score units (pawns, centipawns, win chance) |
 | **Something looks wrong** | click the status line in the panel: it copies the position StockCrab read from the page, so you can paste it into a bug report |
 
-## Move ratings
-
-Ratings follow the bands of a chess.com style game review. Losses are measured in **win-chance points** against the engine's best line of the same depth (win chance = the lichess formula, `50 + 50 · (2 / (1 + e^(−0.00368208 · cp)) − 1)`).
-
-| Rating | Meaning |
-|---|---|
-| **Brilliant** | a good piece sacrifice: the best (or nearly best) move leaves a piece en prise that the engine's line does not win back, you stay no worse than about −0.5, and no other move already wins by itself |
-| **Great** | the only good move: every other move is clearly worse (10+ points), or 5+ points when it decides between winning, equal and losing |
-| **Best** | the engine's first choice |
-| **Excellent** | up to 2 points behind the best move |
-| **Good** | up to 5 points behind |
-| **Inaccuracy** | 5 to 10 points |
-| **Mistake** | 10 to 20 points |
-| **Blunder** | more than 20 points |
-| **Book** | opening theory, from 7,981 positions of the [lichess opening collection](https://github.com/lichess-org/chess-openings) (CC0) |
-| **Forced** | the only legal move |
-| **Miss** | your opponent's last move gave you 10+ points, you were clearly better, and your move lost 5 to 20 of them |
-
-Hints rate the move they suggest. After you play, your own move is rated against the hint's lines (or, if you moved before the hint was ready, against a quick analysis), and the rating appears on the square you moved to. Switch **all** ratings off (no kind icons or names on the hints, no rating of your moves) with *Moves → Show move ratings*, or only the rating of your own moves with *Moves → Rate the move I played*.
-
-<p align="center"><img src="docs/ratings.png" alt="The rating cards" width="860"></p>
-
 ## Premoves
 
 While it is your opponent's turn, StockCrab can show (in cyan) a reply you could premove to save clock time. Three styles:
@@ -121,9 +98,9 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 | Section | What you can set |
 |---|---|
 | **Engine** | strength (Elo 1320 … max), think time (0.5 – 30 s), depth limit, aggression, hash (16 – 256 MB), model |
-| **Moves** | how many other good moves (0 – 3) and how far behind they may be, score units, show move ratings, rate the move I played, the move list in the panel |
+| **Moves** | how many other good moves (0 – 3) and how far behind they may be, score units, the move list in the panel |
 | **Premove** | on or off, style, how sure the style has to be, how many likely replies are checked and for how long |
-| **Look** | colours, line width, opacity, blur under the hints, outline, arrow head, score, icon, name of the kind of move, animations |
+| **Look** | colours, line width, opacity, blur under the hints, outline, arrow head, score, cell name, animations |
 | **Panel** | corner, which side I play, the `Alt+X` hotkey |
 
 ## Engines
@@ -151,8 +128,8 @@ All of them are builds of [stockfish.js](https://github.com/nmrugg/stockfish.js)
 ```
 
 - **Reading the board.** On chess.com the game's own position is used when the page offers it, otherwise the pieces are read from the DOM; on lichess they are read from chessground. The side to move comes from the highlighted last move (and is remembered), a held piece freezes everything until it is dropped, impossible positions are skipped.
-- **Searching.** One engine worker in the background page, `go movetime` / `go depth`, MultiPV for the other good moves, `searchmoves` to rate a move that is not among the lines, full strength for premove and rating searches.
-- **Drawing.** One SVG over the board, laid out in the board's own pixels. The outlines and the arrow of a move are one layer, so overlaps never get darker. Cards and icons move to the corner of the square that no arrow touches.
+- **Searching.** One engine worker in the background page, `go movetime` / `go depth`, MultiPV for the other good moves, full strength for the premove searches.
+- **Drawing.** One SVG over the board, laid out in the board's own pixels. The outlines and the arrow of a move are one layer, so overlaps never get darker. The card moves to the corner of the square that no arrow touches.
 
 ## Privacy
 
@@ -166,11 +143,9 @@ StockCrab shows engine moves in real time. That is great for **analysis, practic
 
 ```
 src/stockcrab/       the extension: this folder is what Firefox loads
-  content/           runs on the pages: board/ hints/ rating/ ui/ core/
+  content/           runs on the pages: board/ hints/ ui/ core/
   background/        hosts the engine: engine/ premove/
-  data/              the opening book
   engine/            Stockfish builds and their licences
-  icons/             your own move icons (optional)
   assets/            the extension's icon
 docs/                banner, screenshots, the intro video, architecture notes
 packaging/           build_xpi.py (Firefox .xpi), build_chrome.py (Chrome folder and .zip)
@@ -188,13 +163,9 @@ tools/               check.py checks the manifest and the scripts
 | **Orientation** | `content/board/orientation.js` | which colour is at the bottom and which one you play |
 | **Hold tracker** | `content/core/hold.js` | waits while a piece is in your hand |
 | **Main loop** | `content/core/tick.js` | every 250 ms: read, ask the engine, draw; retries after a failure |
-| **Mark builder** | `content/hints/marks.js` | turns the engine's answer into the marks to draw |
-| **Hint painter** | `content/hints/draw.js` | arrows, outlines, cards and icons over the board |
-| **Icon kit** | `content/hints/icons.js` | built-in vector icons and your own icon files |
-| **Move classifier** | `content/rating/classify.js` | Great, Miss, and the classifier itself |
-| **Sacrifice detector** | `content/rating/sacrifice.js` | tells a real piece sacrifice (Brilliant) |
-| **Opening book** | `content/rating/book.js`, `data/opening-book.js` | tells opening theory (Book) |
-| **Played-move rater** | `content/rating/played-move.js` | rates the move you just played |
+| **Mark builder** | `content/hints/marks.js`, `score.js` | turns the engine's answer into the marks to draw, writes the scores |
+| **Hint painter** | `content/hints/draw.js` | arrows, outlines and cards over the board |
+| **Move finder** | `content/board/moves.js` | which move turned one position into the next (lichess side to move) |
 | **Panel** | `content/ui/panel.js`, `content/ui/status.js` | the settings panel, its status line and move list |
 | **Settings** | `content/core/settings.js` | defaults, saving, migration |
 | **Engine registry** | `background/engine/models.js` | the six Stockfish builds |
@@ -212,7 +183,6 @@ The complete list in load order, the data flow and how to add a file are in [`do
 
 - StockCrab is released under the **GNU GPL v3** ([LICENSE](LICENSE)), the same licence as the bundled engines.
 - Engines: [stockfish.js](https://github.com/nmrugg/stockfish.js) © Chess.com, LLC, and [Stockfish](https://github.com/official-stockfish/Stockfish) © the Stockfish developers (GPLv3).
-- Opening book: [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings) (CC0).
 - Intro video: music *Free Uplifting Music* by [Seth_Makes_Sounds](https://freesound.org/people/Seth_Makes_Sounds/sounds/670819/) (CC0); chess pieces in the video: cburnett set; typeface: Inter.
 - chess.com and lichess.org are trademarks of their owners. StockCrab is an independent project and is not affiliated with or endorsed by them.
 
