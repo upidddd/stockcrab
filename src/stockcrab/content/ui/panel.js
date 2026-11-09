@@ -24,6 +24,7 @@ const SECTIONS = [
     { key: "others", type: "range", label: "Other good moves (0 = strongest)", min: 0, max: 3, step: 1, fmt: (v) => v, fx: "query" },
     { key: "goodWithin", type: "range", label: "“Good” = at most this far behind", min: 10, max: 150, step: 10, fmt: (v) => v + " cp", fx: "render" },
     { key: "scoreUnits", type: "select", label: "Scores as", opts: [["pawns", "Pawns (+0.35)"], ["cp", "Centipawns (+35)"], ["win", "Win chance (62%)"]], fx: "render" },
+    { key: "showRatings", type: "check", label: "Show move ratings", fx: "render" },
     { key: "ratePlayed", type: "check", label: "Rate the move I played", fx: "render" },
     { key: "showList", type: "check", label: "Show the move list below", fx: "panel" },
   ]],

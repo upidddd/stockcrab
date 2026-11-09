@@ -41,6 +41,7 @@ const DEFAULTS = {
   showHead: true,
   showLabels: true,
   showIcon: true, // the real icon of the kind of move on the cell (Brilliant, Great, Best ...)
+  showRatings: true, // master switch: off = no rating anywhere (no kind icon or name on the hints, no rating of the moves I play)
   ratePlayed: true, // after my move: rate the move I played (Excellent, Good, Mistake ...) on its target cell
   showQuality: true, // Best / Great ! / Brilliant !! ... on the target cell
   showSquare: false, // the target cell's name in the card (off by default: the position already says it)

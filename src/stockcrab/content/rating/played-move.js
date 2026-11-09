@@ -9,7 +9,7 @@ let afterMine = null; // { pct, fen }: win chance of my last played move (my vie
 let ratedFor = null; // { fen, mark }: the position that rating belongs to, so a re-read of it keeps the rating
 
 function show(board, marks, animate = false) {
-  drawMarks(board, playedMark && settings.ratePlayed ? marks.concat(playedMark) : marks, animate);
+  drawMarks(board, playedMark && settings.ratePlayed && settings.showRatings !== false ? marks.concat(playedMark) : marks, animate);
   listMoves(marks, animate);
 }
 

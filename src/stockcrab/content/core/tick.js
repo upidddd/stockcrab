@@ -113,14 +113,14 @@ async function tick() {
 
   // "Whoever is to move" (analysis boards, puzzles, playing both sides): every position is mine
   const mine = settings.side === "turn" || fen.split(" ")[1] === myColour(board);
-  playedMark = settings.ratePlayed && ratedFor && ratedFor.fen === fen ? ratedFor.mark : null;
+  playedMark = settings.ratePlayed && settings.showRatings !== false && ratedFor && ratedFor.fen === fen ? ratedFor.mark : null;
   if (!keepAlive) {
     try {
       keepAlive = browser.runtime.connect();
       keepAlive.onDisconnect.addListener(() => (keepAlive = null));
     } catch (e) {}
   }
-  if (settings.ratePlayed && lastMine && lastMine.fen !== fen) {
+  if (settings.ratePlayed && settings.showRatings !== false && lastMine && lastMine.fen !== fen) {
     const mark = await ratePlayedMove(id, fen);
     if (id !== requestId) return;
     ratedFor = mark ? { fen, mark } : null;
@@ -147,7 +147,7 @@ async function tick() {
             elo: settings.elo, movetime: settings.movetime, depth: settings.depth, hash: settings.hash,
             aggression: settings.aggression,
             // "Great" (the only good move) needs a second line to compare with, so the labels ask for at least two
-            multipv: Math.max(1 + settings.others, settings.showIcon || settings.showQuality ? 2 : 1),
+            multipv: Math.max(1 + settings.others, settings.showRatings !== false && (settings.showIcon || settings.showQuality) ? 2 : 1),
           }
         : {
             type: "premove", id, fen,

@@ -89,7 +89,7 @@ Ratings follow the bands of a chess.com style game review. Losses are measured i
 | **Forced** | the only legal move |
 | **Miss** | your opponent's last move gave you 10+ points, you were clearly better, and your move lost 5 to 20 of them |
 
-Hints rate the move they suggest. After you play, your own move is rated against the hint's lines (or, if you moved before the hint was ready, against a quick analysis), and the rating appears on the square you moved to. Switch it off under *Moves → Rate the move I played*.
+Hints rate the move they suggest. After you play, your own move is rated against the hint's lines (or, if you moved before the hint was ready, against a quick analysis), and the rating appears on the square you moved to. Switch **all** ratings off (no kind icons or names on the hints, no rating of your moves) with *Moves → Show move ratings*, or only the rating of your own moves with *Moves → Rate the move I played*.
 
 <p align="center"><img src="docs/ratings.png" alt="The rating cards" width="860"></p>
 
@@ -108,7 +108,7 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 | Section | What you can set |
 |---|---|
 | **Engine** | strength (Elo 1320 … max), think time (0.5 – 30 s), depth limit, aggression, hash (16 – 256 MB), model |
-| **Moves** | how many other good moves (0 – 3) and how far behind they may be, score units, rate the move I played, the move list in the panel |
+| **Moves** | how many other good moves (0 – 3) and how far behind they may be, score units, show move ratings, rate the move I played, the move list in the panel |
 | **Premove** | on or off, style, how sure the style has to be, how many likely replies are checked and for how long |
 | **Look** | colours, line width, opacity, blur under the hints, outline, arrow head, score, icon, name of the kind of move, animations |
 | **Panel** | corner, which side I play, the `Alt+X` hotkey |

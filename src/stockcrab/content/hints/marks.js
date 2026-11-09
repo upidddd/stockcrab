@@ -46,7 +46,7 @@ function marksForMyTurn(res, others, fen) {
   // evaluated it, no score is shown (the best line's score would be someone else's).
   const chosen = lines.find((l) => l.move === res.move) || res.chosen || null;
   const make = (move, kind, line) => ({
-    move, kind, label: line ? scoreText(line, 1) : "", san: sanish(fen, move), cls: line ? classifyMove(lines, line, fen) : null,
+    move, kind, label: line ? scoreText(line, 1) : "", san: sanish(fen, move), cls: line && settings.showRatings !== false ? classifyMove(lines, line, fen) : null,
   });
   const marks = [make(res.move, "best", chosen)];
   for (const l of lines) {
