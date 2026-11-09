@@ -12,6 +12,7 @@ Best move, other good moves, a score for each, a rating for every move you play,
 <br>
 
 [![Firefox](https://img.shields.io/badge/Firefox-Manifest%20V3-e4572e?style=flat-square&logo=firefoxbrowser&logoColor=white&labelColor=262421)](#install)
+[![Chrome](https://img.shields.io/badge/Chrome-Manifest%20V3-e4572e?style=flat-square&logo=googlechrome&logoColor=white&labelColor=262421)](#chrome-edge-brave)
 [![Engine](https://img.shields.io/badge/engine-Stockfish%2019-e4572e?style=flat-square&labelColor=262421)](#engines)
 [![License](https://img.shields.io/badge/license-GPL--3.0-e4572e?style=flat-square&labelColor=262421)](LICENSE)
 [![Privacy](https://img.shields.io/badge/network%20requests-none-e4572e?style=flat-square&labelColor=262421)](#privacy)
@@ -51,7 +52,9 @@ Best move, other good moves, a score for each, a rating for every move you play,
 
 ## Install
 
-StockCrab is a Firefox extension (Manifest V3). It is not on addons.mozilla.org yet, so load it yourself:
+StockCrab runs in **Firefox** and in **Chrome** (and Chromium browsers: Edge, Brave, Opera, Vivaldi). It is not in the add-on stores yet, so load it yourself.
+
+### Firefox
 
 1. Download the repository (**Code → Download ZIP**) and unpack it, or `git clone https://github.com/upidddd/stockcrab.git`.
 2. In Firefox open `about:debugging#/runtime/this-firefox`.
@@ -59,6 +62,16 @@ StockCrab is a Firefox extension (Manifest V3). It is not on addons.mozilla.org 
 4. Open a game on chess.com or lichess. The panel appears in the bottom-right corner. Switch it on (or press `Alt+X`).
 
 Temporary add-ons are removed when Firefox closes. For a permanent install use Firefox Developer Edition, Nightly or ESR with `xpinstall.signatures.required` set to `false` in `about:config`, pack it with `python3 packaging/build_xpi.py` (it writes `dist/stockcrab-<version>.xpi`) and open the file, or sign it as an unlisted add-on with [`web-ext sign`](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/#web-ext-sign).
+
+### Chrome, Edge, Brave
+
+1. Get the Chrome build: download `stockcrab-chrome-<version>.zip` from [Releases](https://github.com/upidddd/stockcrab/releases) and unzip it, or build it from the source with `python3 packaging/build_chrome.py` (it writes `dist/chrome/`).
+2. Open `chrome://extensions` (`edge://extensions`, `brave://extensions`), switch on **Developer mode**.
+3. Click **Load unpacked** and choose the unzipped folder (or `dist/chrome`). Chrome 116 or newer.
+
+It is the same code as the Firefox version. Chrome's background is a service worker, which cannot start the engine's Web Worker, so on Chrome the engine runs in an offscreen document ([how](docs/architecture.md#chrome)).
+
+### First start
 
 The first start of the full network takes a few seconds (the panel says *starting…*). If a model does not start in time, StockCrab falls back to Stockfish 19 Full, then Lite, and says so in the panel.
 
@@ -160,9 +173,10 @@ src/stockcrab/       the extension: this folder is what Firefox loads
   icons/             your own move icons (optional)
   assets/            the extension's icon
 docs/                banner, screenshots, the intro video, architecture notes
-packaging/           build_xpi.py packs the extension into an .xpi
+packaging/           build_xpi.py (Firefox .xpi), build_chrome.py (Chrome folder and .zip)
+platforms/chrome/    the Chrome glue: service worker, offscreen engine host, API shims
 tools/               check.py checks the manifest and the scripts
-.github/workflows/   builds the .xpi on every push and attaches it to a release
+.github/workflows/   builds both packages on every push and attaches them to a release
 ```
 
 ### Components

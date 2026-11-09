@@ -1,7 +1,7 @@
 name: Build
 
-# every push and pull request: check the extension and pack it, keep the .xpi as an artifact
-# a v* tag: the same, then publish it on a GitHub release
+# every push and pull request: check the extension, pack it for Firefox (.xpi) and Chrome (.zip), keep both as artifacts
+# a v* tag: the same, then attach both to a GitHub release
 on:
   push:
     branches: [main]
@@ -26,13 +26,18 @@ jobs:
       - name: Check
         run: python3 tools/check.py
 
-      - name: Pack
+      - name: Pack for Firefox
         run: python3 packaging/build_xpi.py
+
+      - name: Pack for Chrome
+        run: python3 packaging/build_chrome.py
 
       - uses: actions/upload-artifact@v4
         with:
-          name: stockcrab-xpi
-          path: dist/*.xpi
+          name: stockcrab-packages
+          path: |
+            dist/*.xpi
+            dist/*.zip
           if-no-files-found: error
 
       - name: Publish
@@ -42,8 +47,8 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/*.xpi --clobber
+            gh release upload "$TAG" dist/*.xpi dist/*.zip --clobber
           else
-            gh release create "$TAG" dist/*.xpi --title "StockCrab ${TAG#v}" --generate-notes \
-              --notes "Download **stockcrab-${TAG#v}.xpi**, or load the \`src/stockcrab\` folder from the source in \`about:debugging\` (see the README)."
+            gh release create "$TAG" dist/*.xpi dist/*.zip --title "StockCrab ${TAG#v}" --generate-notes \
+              --notes "Firefox: **stockcrab-${TAG#v}.xpi**. Chrome, Edge, Brave: **stockcrab-chrome-${TAG#v}.zip** (unzip, then Load unpacked). See the README."
           fi

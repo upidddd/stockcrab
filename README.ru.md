@@ -12,6 +12,7 @@
 <br>
 
 [![Firefox](https://img.shields.io/badge/Firefox-Manifest%20V3-e4572e?style=flat-square&logo=firefoxbrowser&logoColor=white&labelColor=262421)](#установка)
+[![Chrome](https://img.shields.io/badge/Chrome-Manifest%20V3-e4572e?style=flat-square&logo=googlechrome&logoColor=white&labelColor=262421)](#chrome-edge-brave)
 [![Движок](https://img.shields.io/badge/движок-Stockfish%2019-e4572e?style=flat-square&labelColor=262421)](#движки)
 [![Лицензия](https://img.shields.io/badge/лицензия-GPL--3.0-e4572e?style=flat-square&labelColor=262421)](LICENSE)
 [![Приватность](https://img.shields.io/badge/запросы%20в%20сеть-нет-e4572e?style=flat-square&labelColor=262421)](#приватность)
@@ -51,7 +52,9 @@
 
 ## Установка
 
-StockCrab это расширение для Firefox (Manifest V3). В каталоге addons.mozilla.org его пока нет, поэтому ставится вручную:
+StockCrab работает в **Firefox** и в **Chrome** (и в браузерах на Chromium: Edge, Brave, Opera, Vivaldi). В магазинах расширений его пока нет, поэтому ставится вручную.
+
+### Firefox
 
 1. Скачайте репозиторий (**Code → Download ZIP**) и распакуйте, либо `git clone https://github.com/upidddd/stockcrab.git`.
 2. В Firefox откройте `about:debugging#/runtime/this-firefox`.
@@ -59,6 +62,16 @@ StockCrab это расширение для Firefox (Manifest V3). В ката�
 4. Откройте партию на chess.com или lichess. Панель появится в правом нижнем углу. Включите её (или нажмите `Alt+X`).
 
 Временные расширения пропадают при закрытии Firefox. Для постоянной установки используйте Firefox Developer Edition, Nightly или ESR, поставьте `xpinstall.signatures.required` в `false` в `about:config`, упакуйте расширение командой `python3 packaging/build_xpi.py` (создаст `dist/stockcrab-<версия>.xpi`) и откройте файл. Либо подпишите расширение как неопубликованное через [`web-ext sign`](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/#web-ext-sign).
+
+### Chrome, Edge, Brave
+
+1. Возьмите сборку для Chrome: скачайте `stockcrab-chrome-<версия>.zip` из [Releases](https://github.com/upidddd/stockcrab/releases) и распакуйте, либо соберите из исходников: `python3 packaging/build_chrome.py` (создаст `dist/chrome/`).
+2. Откройте `chrome://extensions` (`edge://extensions`, `brave://extensions`) и включите **Режим разработчика**.
+3. Нажмите **Загрузить распакованное** и выберите распакованную папку (или `dist/chrome`). Нужен Chrome 116 или новее.
+
+Это тот же код, что и в версии для Firefox. Фон в Chrome это service worker, а он не может запустить Web Worker с движком, поэтому в Chrome движок работает в offscreen-документе ([подробнее](docs/architecture.md#chrome)).
+
+### Первый запуск
 
 Первый запуск полной сети занимает несколько секунд (в панели написано *starting…*). Если модель не успела запуститься, StockCrab переключится на Stockfish 19 Full, потом на Lite и напишет об этом в панели.
 
@@ -160,9 +173,10 @@ src/stockcrab/       расширение: именно эту папку заг
   icons/             ваши иконки ходов (необязательно)
   assets/            иконка расширения
 docs/                баннер, скриншоты, видео-интро, описание устройства
-packaging/           build_xpi.py упаковывает расширение в .xpi
+packaging/           build_xpi.py (Firefox .xpi), build_chrome.py (папка и .zip для Chrome)
+platforms/chrome/    обвязка для Chrome: service worker, offscreen-документ с движком, замены API
 tools/               check.py проверяет манифест и скрипты
-.github/workflows/   собирает .xpi при каждом пуше и прикладывает к релизу
+.github/workflows/   собирает обе версии при каждом пуше и прикладывает их к релизу
 ```
 
 ### Компоненты

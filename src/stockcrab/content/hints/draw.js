@@ -107,31 +107,26 @@ function drawMarks(board, marks, animate = false) {
   const allParts = []; // every arrow's polygons: the card and the icon keep clear of them
 
   // Frosted glass: SVG cannot blur what is behind it, so thin HTML layers with `backdrop-filter` sit under the
-  // drawing, each clipped to the exact shape of an outline ring or an arrow. The pieces inside the cell stay sharp.
+  // drawing, each one the exact shape of an outline ring, an arrow, a card or an icon. The pieces inside the cell stay
+  // sharp. The shapes are plain boxes (rounded or turned at most), never clip-path: Chromium ignores clip-path on a
+  // backdrop-filter as soon as an ancestor clips with rounded corners, which chess.com's board does.
   const blurPx = settings.blur;
   const blurLayer = blurPx > 0 ? document.createElement("div") : null;
   if (blurLayer) {
     blurLayer.setAttribute("class", MARK);
     blurLayer.style.cssText = `position:absolute;left:0;top:0;width:${br.width}px;height:${br.height}px;pointer-events:none;z-index:19`;
   }
-  const blurShape = (x, y, w, h, clip) => {
-    if (!blurLayer) return;
+  const blurShape = (x, y, w, h, extra = "") => {
+    if (!blurLayer || !(w > 0) || !(h > 0)) return;
     const d = document.createElement("div");
     d.style.cssText =
       `position:absolute;left:${x}px;top:${y}px;width:${w}px;height:${h}px;` +
-      `backdrop-filter:blur(${blurPx}px);-webkit-backdrop-filter:blur(${blurPx}px);clip-path:${clip}`;
+      `backdrop-filter:blur(${blurPx}px);-webkit-backdrop-filter:blur(${blurPx}px);${extra}`;
     blurLayer.appendChild(d);
   };
-  // "M x y L ... Z" for a polygon, always clockwise so that several polygons in one path add up (nonzero fill)
-  const polyPath = (pts, ox, oy) => {
-    let area = 0;
-    pts.forEach(([x, y], i) => {
-      const [nx, ny] = pts[(i + 1) % pts.length];
-      area += x * ny - nx * y;
-    });
-    const p = area < 0 ? pts.slice().reverse() : pts;
-    return "M" + p.map(([x, y]) => `${(x - ox).toFixed(2)} ${(y - oy).toFixed(2)}`).join("L") + "Z";
-  };
+  // a bar of the given length and thickness that starts at (x, y) and runs in the direction (ux, uy)
+  const blurBar = (x, y, ux, uy, len, thick, round) =>
+    blurShape(x, y - thick / 2, len, thick, `transform-origin:0 50%;transform:rotate(${Math.atan2(uy, ux)}rad);` + (round ? `border-radius:${thick / 2}px;` : ""));
 
   // Last in the list is drawn first, so the main move ends up on top.
   for (const m of marks.slice().reverse()) {
@@ -160,7 +155,10 @@ function drawMarks(board, marks, animate = false) {
         if (anim) animateIn(outline, [{ opacity: 0 }, { opacity: 1 }], 0, 160);
         // ring-shaped blur exactly as wide as the outline's own stroke: nothing outside the line is blurred
         const band = ow;
-        blurShape(r.x, r.y, r.w, r.h, `path(evenodd, "M0 0H${r.w}V${r.h}H0ZM${band} ${band}V${r.h - band}H${r.w - band}V${band}Z")`);
+        blurShape(r.x, r.y, r.w, band);
+        blurShape(r.x, r.y + r.h - band, r.w, band);
+        blurShape(r.x, r.y + band, band, r.h - 2 * band);
+        blurShape(r.x + r.w - band, r.y + band, band, r.h - 2 * band);
       }
     }
 
@@ -207,13 +205,17 @@ function drawMarks(board, marks, animate = false) {
       arrowParts.push(shaft);
       if (hl) arrowParts.push([[tc.x - ux * sq * 0.03, tc.y - uy * sq * 0.03], [bx - uy * hw, by + ux * hw], [bx + uy * hw, by - ux * hw]]);
       if (blurLayer) {
-        const xs = arrowParts.flat().map((p) => p[0]);
-        const ys = arrowParts.flat().map((p) => p[1]);
-        const ox = Math.min(...xs) - 1;
-        const oy = Math.min(...ys) - 1;
-        const w = Math.max(...xs) + 1 - ox;
-        const h = Math.max(...ys) + 1 - oy;
-        blurShape(ox, oy, w, h, `path("${arrowParts.map((pts) => polyPath(pts, ox, oy)).join("")}")`);
+        // the shaft is one turned bar with round ends; the head is a few bars along the axis, narrowing to the tip
+        blurBar(sx, sy, ux, uy, Math.hypot(x2 - sx, y2 - sy), lw, true);
+        if (hl) {
+          const tipX = tc.x - ux * sq * 0.03;
+          const tipY = tc.y - uy * sq * 0.03;
+          const len = Math.hypot(tipX - bx, tipY - by);
+          const n = 6;
+          for (let i = 0; i < n; i++) {
+            blurBar(bx + ux * (len * i) / n, by + uy * (len * i) / n, ux, uy, len / n, 2 * hw * (1 - (i + 0.5) / n), false);
+          }
+        }
       }
     }
 
@@ -345,7 +347,7 @@ function drawMarks(board, marks, animate = false) {
       card.setAttribute("width", q.w);
       card.setAttribute("height", q.h);
       card.setAttribute("rx", sq * 0.05);
-      blurShape(q.x, q.y, q.w, q.h, `inset(0 round ${sq * 0.05}px)`); // exactly under the card
+      blurShape(q.x, q.y, q.w, q.h, `border-radius:${sq * 0.05}px`); // exactly under the card
       let cy = q.y + padY;
       if (t1) {
         t1.setAttribute("x", q.x + padX);
@@ -370,7 +372,7 @@ function drawMarks(board, marks, animate = false) {
       const icon = qualityIcon(c.cls, cx, cy, r);
       icon.setAttribute("opacity", Math.min(1, c.op + 0.05));
       svg.appendChild(icon);
-      blurShape(q.x, q.y, q.w, q.h, `circle(${r}px at ${r}px ${r}px)`); // exactly under the round icon
+      blurShape(q.x, q.y, q.w, q.h, "border-radius:50%"); // exactly under the round icon
       if (anim) animateIn(icon, [{ opacity: 0, transform: `translate(${cx}px, ${cy}px) scale(${r * 0.5})` }, { transform: `translate(${cx}px, ${cy}px) scale(${r})` }], 190, 160);
     }
   }

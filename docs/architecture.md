@@ -90,7 +90,29 @@ Messages from the content scripts to the background: `status`, `engine` (switch 
 Top-level code that runs at load time belongs in the entry points (`content/core/main.js`, `background/main.js`, and
 `engine/boot.js` for the engine start), because they load last, when everything else exists.
 
+## Chrome
+
+The Chrome version is built from the same files by `packaging/build_chrome.py` into `dist/chrome/`. Only the glue in
+[`platforms/chrome/`](../platforms/chrome) is Chrome's own:
+
+| Component | File | What it does |
+|---|---|---|
+| Chrome shim (content scripts) | `platforms/chrome/browser-shim.js` | `browser` = `chrome` (MV3 `chrome.*` calls return promises) |
+| Chrome service worker | `platforms/chrome/service-worker.js` | the background; only makes sure the engine host exists |
+| Engine host | `chrome/offscreen.html` (generated) | an offscreen document that loads every file of `background/`, in the manifest's order |
+| Chrome shim (engine host) | `platforms/chrome/offscreen-shim.js` | `browser.runtime` for the background scripts; turns their returned promises into `sendResponse` |
+| chess.com position bridge | `platforms/chrome/page-fen.js` | a MAIN-world script that publishes the game's FEN (Chrome has no `wrappedJSObject`) |
+
+Why: a Chrome MV3 background is a service worker, and a service worker cannot start the Web Worker the engine runs in.
+An offscreen document can. Messages from the page reach both; the service worker never answers, the engine host does.
+If a message arrives before the engine host exists, it fails and the main loop asks again a moment later.
+
+The blur under the hints uses plain boxes (four bars for an outline, a turned bar for the shaft, slices for the head,
+rounded boxes for cards and icons), never `clip-path`: Chromium ignores `clip-path` on a `backdrop-filter` as soon as an
+ancestor clips with rounded corners, and chess.com's board does.
+
 ## Packing
 
-`python3 packaging/build_xpi.py` writes `dist/stockcrab-<version>.xpi`. The GitHub workflow in `.github/workflows/build.yml`
-runs the check and the packing on every push, and attaches the `.xpi` to the release when a `v*` tag is pushed.
+`python3 packaging/build_xpi.py` writes `dist/stockcrab-<version>.xpi`, `python3 packaging/build_chrome.py` writes `dist/chrome/`
+and `dist/stockcrab-chrome-<version>.zip`. The GitHub workflow in `.github/workflows/build.yml` runs the check and both
+packings on every push, and attaches both files to the release when a `v*` tag is pushed.
