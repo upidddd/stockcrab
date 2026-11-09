@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="assets/banner.gif" alt="StockCrab: Stockfish hints right on the board" width="880">
+<img src="docs/banner.gif" alt="StockCrab: Stockfish hints right on the board" width="880">
 
 <br>
 
-# <img src="icon.svg" alt="" width="34" align="top"> StockCrab
+# <img src="src/stockcrab/assets/icon.svg" alt="" width="34" align="top"> StockCrab
 
 **Stockfish move hints, drawn right on the board, on chess.com and lichess.**<br>
 Best move, other good moves, a score for each, a rating for every move you play, and a premove while your opponent thinks.
@@ -16,7 +16,7 @@ Best move, other good moves, a score for each, a rating for every move you play,
 [![License](https://img.shields.io/badge/license-GPL--3.0-e4572e?style=flat-square&labelColor=262421)](LICENSE)
 [![Privacy](https://img.shields.io/badge/network%20requests-none-e4572e?style=flat-square&labelColor=262421)](#privacy)
 
-[**Install**](#install) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Move ratings](#move-ratings) &nbsp;·&nbsp; [Premoves](#premoves) &nbsp;·&nbsp; [Settings](#settings) &nbsp;·&nbsp; [Fair play](#fair-play) &nbsp;·&nbsp; [Intro video](assets/intro.mp4)
+[**Install**](#install) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Move ratings](#move-ratings) &nbsp;·&nbsp; [Premoves](#premoves) &nbsp;·&nbsp; [Settings](#settings) &nbsp;·&nbsp; [Fair play](#fair-play) &nbsp;·&nbsp; [Intro video](docs/intro.mp4)
 
 [Русская версия](README.ru.md)
 
@@ -26,8 +26,8 @@ Best move, other good moves, a score for each, a rating for every move you play,
 
 <table>
 <tr>
-<td width="50%"><img src="assets/hints.png" alt="Hints on the board and the panel"></td>
-<td width="50%"><img src="assets/premove.png" alt="A premove while the opponent thinks"></td>
+<td width="50%"><img src="docs/hints.png" alt="Hints on the board and the panel"></td>
+<td width="50%"><img src="docs/premove.png" alt="A premove while the opponent thinks"></td>
 </tr>
 <tr>
 <td align="center"><sub>The best move and another good one, each with its score and rating</sub></td>
@@ -35,7 +35,7 @@ Best move, other good moves, a score for each, a rating for every move you play,
 </tr>
 </table>
 
-> The screenshots, the banner and the intro video show the extension with a custom set of move icons. Those icon files are **not** part of this repository: out of the box StockCrab draws its own icons. See [`icons/`](icons/README.md) to use your own.
+> The screenshots, the banner and the intro video show the extension with a custom set of move icons. Those icon files are **not** part of this repository: out of the box StockCrab draws its own icons. See [`src/stockcrab/icons/`](src/stockcrab/icons/README.md) to use your own.
 
 ## Features
 
@@ -55,10 +55,10 @@ StockCrab is a Firefox extension (Manifest V3). It is not on addons.mozilla.org 
 
 1. Download the repository (**Code → Download ZIP**) and unpack it, or `git clone https://github.com/upidddd/stockcrab.git`.
 2. In Firefox open `about:debugging#/runtime/this-firefox`.
-3. Click **Load Temporary Add-on…** and choose the `manifest.json` from the folder.
+3. Click **Load Temporary Add-on…** and choose `src/stockcrab/manifest.json`.
 4. Open a game on chess.com or lichess. The panel appears in the bottom-right corner. Switch it on (or press `Alt+X`).
 
-Temporary add-ons are removed when Firefox closes. For a permanent install use Firefox Developer Edition, Nightly or ESR with `xpinstall.signatures.required` set to `false` in `about:config`, pack the folder as an `.xpi` (`zip -r ../stockcrab.xpi .`) and open it, or sign it as an unlisted add-on with [`web-ext sign`](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/#web-ext-sign).
+Temporary add-ons are removed when Firefox closes. For a permanent install use Firefox Developer Edition, Nightly or ESR with `xpinstall.signatures.required` set to `false` in `about:config`, pack it with `python3 packaging/build_xpi.py` (it writes `dist/stockcrab-<version>.xpi`) and open the file, or sign it as an unlisted add-on with [`web-ext sign`](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/#web-ext-sign).
 
 The first start of the full network takes a few seconds (the panel says *starting…*). If a model does not start in time, StockCrab falls back to Stockfish 19 Full, then Lite, and says so in the panel.
 
@@ -91,7 +91,7 @@ Ratings follow the bands of a chess.com style game review. Losses are measured i
 
 Hints rate the move they suggest. After you play, your own move is rated against the hint's lines (or, if you moved before the hint was ready, against a quick analysis), and the rating appears on the square you moved to. Switch it off under *Moves → Rate the move I played*.
 
-<p align="center"><img src="assets/ratings.png" alt="The rating cards" width="860"></p>
+<p align="center"><img src="docs/ratings.png" alt="The rating cards" width="860"></p>
 
 ## Premoves
 
@@ -130,7 +130,7 @@ All of them are builds of [stockfish.js](https://github.com/nmrugg/stockfish.js)
 ```
  chess.com / lichess page                      background (event page)
 ┌────────────────────────────┐   messages    ┌─────────────────────────────┐
-│ content.js                 │ ────────────▶ │ background.js               │
+│ content/  (20 scripts)     │ ────────────▶ │ background/  (10 scripts)   │
 │  · reads the board         │               │  · queue of searches        │
 │  · draws arrows, cards     │ ◀──────────── │  · Worker: Stockfish (WASM) │
 │  · the panel (shadow DOM)  │   lines, score│  · UCI MultiPV, searchmoves │
@@ -152,14 +152,47 @@ StockCrab shows engine moves in real time. That is great for **analysis, practic
 ## Repository
 
 ```
-manifest.json      extension manifest (MV3)
-content.js         board reading, drawing, panel, ratings
-background.js      engine worker, searches, premove analysis
-book.js            opening positions (hashes) for the Book rating
-engine/            Stockfish builds and their licences
-icons/             put your own move icons here (optional)
-assets/            banner, screenshots, the intro video
+src/stockcrab/       the extension: this folder is what Firefox loads
+  content/           runs on the pages: board/ hints/ rating/ ui/ core/
+  background/        hosts the engine: engine/ premove/
+  data/              the opening book
+  engine/            Stockfish builds and their licences
+  icons/             your own move icons (optional)
+  assets/            the extension's icon
+docs/                banner, screenshots, the intro video, architecture notes
+packaging/           build_xpi.py packs the extension into an .xpi
+tools/               check.py checks the manifest and the scripts
+.github/workflows/   builds the .xpi on every push and attaches it to a release
 ```
+
+### Components
+
+| Component | File | What it does |
+|---|---|---|
+| **Board reader** | `content/board/reader.js` | reads the position from chess.com, repairs the side to move, rejects impossible positions |
+| **Lichess reader** | `content/board/lichess.js` | reads the position from lichess's board |
+| **Orientation** | `content/board/orientation.js` | which colour is at the bottom and which one you play |
+| **Hold tracker** | `content/core/hold.js` | waits while a piece is in your hand |
+| **Main loop** | `content/core/tick.js` | every 250 ms: read, ask the engine, draw; retries after a failure |
+| **Mark builder** | `content/hints/marks.js` | turns the engine's answer into the marks to draw |
+| **Hint painter** | `content/hints/draw.js` | arrows, outlines, cards and icons over the board |
+| **Icon kit** | `content/hints/icons.js` | built-in vector icons and your own icon files |
+| **Move classifier** | `content/rating/classify.js` | Great, Miss, and the classifier itself |
+| **Sacrifice detector** | `content/rating/sacrifice.js` | tells a real piece sacrifice (Brilliant) |
+| **Opening book** | `content/rating/book.js`, `data/opening-book.js` | tells opening theory (Book) |
+| **Played-move rater** | `content/rating/played-move.js` | rates the move you just played |
+| **Panel** | `content/ui/panel.js`, `content/ui/status.js` | the settings panel, its status line and move list |
+| **Settings** | `content/core/settings.js` | defaults, saving, migration |
+| **Engine registry** | `background/engine/models.js` | the six Stockfish builds |
+| **Search runner** and **Search queue** | `background/engine/search.js`, `queue.js` | one search at a time, a newer request replaces the waiting one |
+| **UCI line builder** | `background/engine/uci-lines.js` | exact scores only, lines from the last complete depth |
+| **Engine boot and recovery** | `background/engine/boot.js` | starts the engine, falls back to another build, restarts after a crash |
+| **Aggression picker** | `background/engine/aggression.js` | a sharper move among nearly equal ones |
+| **Premove analyst** | `background/premove/analysis.js` | the reply worth premoving (three styles) |
+| **Pawn-trade rule** | `background/premove/pawn-trades.js` | the rule-based pawn retake |
+| **Message router** | `background/main.js` | switches engines, answers the content scripts |
+
+The complete list in load order, the data flow and how to add a file are in [`docs/architecture.md`](docs/architecture.md).
 
 ## Credits and licences
 
@@ -169,4 +202,4 @@ assets/            banner, screenshots, the intro video
 - Intro video: music *Free Uplifting Music* by [Seth_Makes_Sounds](https://freesound.org/people/Seth_Makes_Sounds/sounds/670819/) (CC0); chess pieces in the video: cburnett set; typeface: Inter.
 - chess.com and lichess.org are trademarks of their owners. StockCrab is an independent project and is not affiliated with or endorsed by them.
 
-<div align="center"><br><img src="icon.svg" alt="" width="40"><br><sub>Made with a crab.</sub></div>
+<div align="center"><br><img src="src/stockcrab/assets/icon.svg" alt="" width="40"><br><sub>Made with a crab.</sub></div>

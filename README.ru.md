@@ -1,10 +1,10 @@
 <div align="center">
 
-<img src="assets/banner.gif" alt="StockCrab: подсказки Stockfish прямо на доске" width="880">
+<img src="docs/banner.gif" alt="StockCrab: подсказки Stockfish прямо на доске" width="880">
 
 <br>
 
-# <img src="icon.svg" alt="" width="34" align="top"> StockCrab
+# <img src="src/stockcrab/assets/icon.svg" alt="" width="34" align="top"> StockCrab
 
 **Подсказки Stockfish прямо на доске: на chess.com и на lichess.**<br>
 Лучший ход, другие хорошие ходы, оценка каждого, рейтинг каждого вашего хода и премув, пока соперник думает.
@@ -16,7 +16,7 @@
 [![Лицензия](https://img.shields.io/badge/лицензия-GPL--3.0-e4572e?style=flat-square&labelColor=262421)](LICENSE)
 [![Приватность](https://img.shields.io/badge/запросы%20в%20сеть-нет-e4572e?style=flat-square&labelColor=262421)](#приватность)
 
-[**Установка**](#установка) &nbsp;·&nbsp; [Возможности](#возможности) &nbsp;·&nbsp; [Оценки ходов](#оценки-ходов) &nbsp;·&nbsp; [Премувы](#премувы) &nbsp;·&nbsp; [Честная игра](#честная-игра) &nbsp;·&nbsp; [Видео-интро](assets/intro.mp4)
+[**Установка**](#установка) &nbsp;·&nbsp; [Возможности](#возможности) &nbsp;·&nbsp; [Оценки ходов](#оценки-ходов) &nbsp;·&nbsp; [Премувы](#премувы) &nbsp;·&nbsp; [Честная игра](#честная-игра) &nbsp;·&nbsp; [Видео-интро](docs/intro.mp4)
 
 [English version](README.md)
 
@@ -26,8 +26,8 @@
 
 <table>
 <tr>
-<td width="50%"><img src="assets/hints.png" alt="Подсказки на доске и панель"></td>
-<td width="50%"><img src="assets/premove.png" alt="Премув, пока соперник думает"></td>
+<td width="50%"><img src="docs/hints.png" alt="Подсказки на доске и панель"></td>
+<td width="50%"><img src="docs/premove.png" alt="Премув, пока соперник думает"></td>
 </tr>
 <tr>
 <td align="center"><sub>Лучший ход и ещё один хороший: у каждого счёт и оценка</sub></td>
@@ -35,7 +35,7 @@
 </tr>
 </table>
 
-> На скриншотах, в баннере и в видео расширение показано со своим набором иконок ходов. Эти файлы **не входят** в репозиторий: из коробки StockCrab рисует собственные иконки. Как подключить свои, написано в [`icons/`](icons/README.md).
+> На скриншотах, в баннере и в видео расширение показано со своим набором иконок ходов. Эти файлы **не входят** в репозиторий: из коробки StockCrab рисует собственные иконки. Как подключить свои, написано в [`src/stockcrab/icons/`](src/stockcrab/icons/README.md).
 
 ## Возможности
 
@@ -55,10 +55,10 @@ StockCrab это расширение для Firefox (Manifest V3). В ката�
 
 1. Скачайте репозиторий (**Code → Download ZIP**) и распакуйте, либо `git clone https://github.com/upidddd/stockcrab.git`.
 2. В Firefox откройте `about:debugging#/runtime/this-firefox`.
-3. Нажмите **Load Temporary Add-on…** и выберите `manifest.json` из папки.
+3. Нажмите **Load Temporary Add-on…** и выберите `src/stockcrab/manifest.json`.
 4. Откройте партию на chess.com или lichess. Панель появится в правом нижнем углу. Включите её (или нажмите `Alt+X`).
 
-Временные расширения пропадают при закрытии Firefox. Для постоянной установки используйте Firefox Developer Edition, Nightly или ESR, поставьте `xpinstall.signatures.required` в `false` в `about:config`, упакуйте папку в `.xpi` (`zip -r ../stockcrab.xpi .`) и откройте его. Либо подпишите расширение как неопубликованное через [`web-ext sign`](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/#web-ext-sign).
+Временные расширения пропадают при закрытии Firefox. Для постоянной установки используйте Firefox Developer Edition, Nightly или ESR, поставьте `xpinstall.signatures.required` в `false` в `about:config`, упакуйте расширение командой `python3 packaging/build_xpi.py` (создаст `dist/stockcrab-<версия>.xpi`) и откройте файл. Либо подпишите расширение как неопубликованное через [`web-ext sign`](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/#web-ext-sign).
 
 Первый запуск полной сети занимает несколько секунд (в панели написано *starting…*). Если модель не успела запуститься, StockCrab переключится на Stockfish 19 Full, потом на Lite и напишет об этом в панели.
 
@@ -91,7 +91,7 @@ StockCrab это расширение для Firefox (Manifest V3). В ката�
 
 Подсказки оценивают тот ход, который предлагают. После вашего хода он оценивается по линиям подсказки (а если вы пошли раньше, чем она была готова, по быстрому анализу), и оценка появляется на клетке, куда вы пошли. Выключается в *Moves → Rate the move I played*.
 
-<p align="center"><img src="assets/ratings.png" alt="Карточки оценок" width="860"></p>
+<p align="center"><img src="docs/ratings.png" alt="Карточки оценок" width="860"></p>
 
 ## Премувы
 
@@ -130,7 +130,7 @@ StockCrab это расширение для Firefox (Manifest V3). В ката�
 ```
  страница chess.com / lichess                 фоновая страница
 ┌────────────────────────────┐  сообщения    ┌─────────────────────────────┐
-│ content.js                 │ ────────────▶ │ background.js               │
+│ content/  (20 скриптов)    │ ────────────▶ │ background/  (10 скриптов)  │
 │  · читает доску            │               │  · очередь поисков          │
 │  · рисует стрелки, карточки│ ◀──────────── │  · Worker: Stockfish (WASM) │
 │  · панель (shadow DOM)     │  линии, счёт  │  · UCI MultiPV, searchmoves │
@@ -152,14 +152,47 @@ StockCrab показывает ходы движка в реальном вре�
 ## Репозиторий
 
 ```
-manifest.json      манифест расширения (MV3)
-content.js         чтение доски, рисование, панель, оценки
-background.js      движок, поиски, анализ премувов
-book.js            дебютные позиции (хеши) для оценки Book
-engine/            сборки Stockfish и их лицензии
-icons/             сюда можно положить свои иконки ходов (необязательно)
-assets/            баннер, скриншоты, видео-интро
+src/stockcrab/       расширение: именно эту папку загружает Firefox
+  content/           работает на страницах: board/ hints/ rating/ ui/ core/
+  background/        держит движок: engine/ premove/
+  data/              дебютная книга
+  engine/            сборки Stockfish и их лицензии
+  icons/             ваши иконки ходов (необязательно)
+  assets/            иконка расширения
+docs/                баннер, скриншоты, видео-интро, описание устройства
+packaging/           build_xpi.py упаковывает расширение в .xpi
+tools/               check.py проверяет манифест и скрипты
+.github/workflows/   собирает .xpi при каждом пуше и прикладывает к релизу
 ```
+
+### Компоненты
+
+| Компонент | Файл | Что делает |
+|---|---|---|
+| **Board reader** (читатель доски) | `content/board/reader.js` | читает позицию с chess.com, чинит чей ход, отбрасывает невозможные позиции |
+| **Lichess reader** | `content/board/lichess.js` | читает позицию с доски lichess |
+| **Orientation** (ориентация) | `content/board/orientation.js` | какой цвет внизу и за какой цвет играете вы |
+| **Hold tracker** | `content/core/hold.js` | ждёт, пока фигура в вашей руке |
+| **Main loop** (главный цикл) | `content/core/tick.js` | каждые 250 мс: читает, спрашивает движок, рисует; повторяет после сбоя |
+| **Mark builder** | `content/hints/marks.js` | превращает ответ движка в метки для рисования |
+| **Hint painter** (рисовальщик) | `content/hints/draw.js` | стрелки, рамки, карточки и значки поверх доски |
+| **Icon kit** | `content/hints/icons.js` | встроенные векторные значки и ваши файлы иконок |
+| **Move classifier** | `content/rating/classify.js` | Great, Miss и сам классификатор |
+| **Sacrifice detector** | `content/rating/sacrifice.js` | отличает настоящую жертву фигуры (Brilliant) |
+| **Opening book** | `content/rating/book.js`, `data/opening-book.js` | отличает дебютную теорию (Book) |
+| **Played-move rater** | `content/rating/played-move.js` | оценивает ход, который вы только что сыграли |
+| **Panel** (панель) | `content/ui/panel.js`, `content/ui/status.js` | панель настроек, её строка статуса и список ходов |
+| **Settings** | `content/core/settings.js` | значения по умолчанию, сохранение, миграция |
+| **Engine registry** | `background/engine/models.js` | шесть сборок Stockfish |
+| **Search runner** и **Search queue** | `background/engine/search.js`, `queue.js` | один поиск за раз, новый запрос заменяет ожидающий |
+| **UCI line builder** | `background/engine/uci-lines.js` | только точные оценки, линии по последней полной глубине |
+| **Engine boot and recovery** | `background/engine/boot.js` | запускает движок, переключается на другую сборку, перезапускает после падения |
+| **Aggression picker** | `background/engine/aggression.js` | более острый ход среди почти равных |
+| **Premove analyst** | `background/premove/analysis.js` | ответ, который стоит сыграть премувом (три стиля) |
+| **Pawn-trade rule** | `background/premove/pawn-trades.js` | взятие пешкой на пешку по правилу |
+| **Message router** | `background/main.js` | переключает движки, отвечает скриптам страницы |
+
+Полный список в порядке загрузки, поток данных и как добавить файл описаны в [`docs/architecture.md`](docs/architecture.md).
 
 ## Авторство и лицензии
 
@@ -169,4 +202,4 @@ assets/            баннер, скриншоты, видео-интро
 - Видео-интро: музыка *Free Uplifting Music* автора [Seth_Makes_Sounds](https://freesound.org/people/Seth_Makes_Sounds/sounds/670819/) (CC0); шахматные фигуры в видео: набор cburnett; шрифт: Inter.
 - chess.com и lichess.org являются товарными знаками их владельцев. StockCrab независимый проект и не связан с ними и не одобрен ими.
 
-<div align="center"><br><img src="icon.svg" alt="" width="40"><br><sub>Сделано с крабом.</sub></div>
+<div align="center"><br><img src="src/stockcrab/assets/icon.svg" alt="" width="40"><br><sub>Сделано с крабом.</sub></div>
