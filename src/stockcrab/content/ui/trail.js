@@ -38,9 +38,10 @@ function trailStep(now) {
 }
 
 addEventListener("pointermove", (e) => {
-  if (!settings.enabled || !settings.cursorTrail || e.pointerType === "touch") return;
+  if (!settings.enabled || !settings.cursorTrail || e.pointerType === "touch" || !extensionAlive()) return;
   if (!trailCanvas || !trailCanvas.isConnected) {
     trailCanvas = document.createElement("canvas");
+    trailCanvas.className = "stockcrab-trail";
     trailCanvas.style.cssText = "position:fixed;left:0;top:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483646";
     document.documentElement.appendChild(trailCanvas);
     trailSize();

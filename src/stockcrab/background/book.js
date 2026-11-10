@@ -18,10 +18,11 @@ function bookFilter(choice) {
   };
 }
 
-// Book moves in a position: first a move that reaches a chosen opening right away, then the one that keeps the most chosen lines.
+// Book moves in a position, the one that keeps the most chosen lines first (for Gambits: one that starts a gambit right away).
 async function bookMoves(fen, choice) {
   const ok = bookFilter(choice);
   if (!ok) return [];
+  const gambits = /^(any )?gambits?$/i.test(choice.trim());
   const b = await loadBook();
   const at = b.pos[fen.split(" ").slice(0, 2).join(" ")];
   if (!at) return [];
@@ -34,7 +35,7 @@ async function bookMoves(fen, choice) {
       return { move, count: kept.length, now, name: name >= 0 ? b.names[name][1] : "", eco: name >= 0 ? b.names[name][0] : "" };
     })
     .filter((m) => m.count)
-    .sort((x, y) => y.now - x.now || y.count - x.count);
+    .sort((x, y) => (gambits ? y.now - x.now : 0) || y.count - x.count);
 }
 
 // Opening names for the panel: families first, then every line.

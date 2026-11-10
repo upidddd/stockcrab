@@ -30,7 +30,7 @@ try {
 } catch (e) {}
 
 document.addEventListener("keydown", (e) => {
-  if (!settings.hotkey || !e.altKey || e.ctrlKey || e.metaKey || e.code !== "KeyX") return;
+  if (!extensionAlive() || !settings.hotkey || !e.altKey || e.ctrlKey || e.metaKey || e.code !== "KeyX") return;
   const t = e.target;
   if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
   e.preventDefault();
@@ -55,6 +55,11 @@ async function refreshEngineInfo() {
     el.textContent = "Engine: no reply";
   }
 }
-setInterval(refreshEngineInfo, 3000);
+const infoTimer = setInterval(refreshEngineInfo, 3000);
 
-setInterval(tick, 250);
+// an old copy stops when the extension is reloaded
+const tickTimer = setInterval(() => {
+  if (extensionAlive()) return tick();
+  clearInterval(tickTimer);
+  clearInterval(infoTimer);
+}, 250);

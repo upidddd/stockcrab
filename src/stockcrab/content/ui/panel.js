@@ -242,20 +242,18 @@ const PANEL_CSS = `
     .box { --bg: #262421; --fg: #ececec; --muted: #9d9a95; --line: #3b3835; --soft: #312e2b; box-shadow: 0 8px 28px rgba(0, 0, 0, .5); }
   }
   .hud {
-    --bg: rgba(255, 255, 255, .96); --fg: #22252a; --muted: #6b7280; --line: #e4e6ea; --accent: #e4572e;
-    position: fixed; z-index: 99999; left: 12px; top: 12px; min-width: 170px; max-width: 250px; padding: 7px 10px 7px 12px;
-    background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, .18); pointer-events: none;
-    font: 11px/1.3 "Inter", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-variant-numeric: tabular-nums;
+    position: fixed; z-index: 99999; left: 0; top: 0; display: flex; flex-direction: column; align-items: flex-start;
+    pointer-events: none; font: 600 13px/1.3 "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; letter-spacing: -.005em;
   }
-  .hud.right { left: auto; right: 12px; }
+  .hud.right { left: auto; right: 0; align-items: flex-end; }
   .hud[hidden] { display: none; }
-  @media (prefers-color-scheme: dark) { .hud { --bg: rgba(38, 36, 33, .96); --fg: #ececec; --muted: #9d9a95; --line: #3b3835; } }
-  .hud .hh { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11.5px; margin-bottom: 3px; }
-  .hud .dot { width: 6px; height: 6px; border-radius: 50%; background: #2ea043; }
-  .hud .hr { display: flex; justify-content: space-between; gap: 10px; padding: 1px 0; }
-  .hud .hr span { color: var(--muted); white-space: nowrap; }
-  .hud .hr b { font-weight: 600; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hud .hl {
+    padding: 1px 6px 1px 5px; background: rgba(12, 10, 10, .62); border-left: 2px solid currentColor;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, .75); white-space: nowrap; animation: hudwave 2.6s linear infinite;
+  }
+  .hud.right .hl { border-left: 0; border-right: 2px solid currentColor; padding: 1px 5px 1px 6px; }
+  .hud .hl span { margin-left: 3px; color: #c9c3bd; }
+  @keyframes hudwave { 0%, 100% { color: #ff8a50; } 33% { color: #e4572e; } 66% { color: #ffb48a; } }
   .c-br { right: 12px; bottom: 12px; } .c-bl { left: 12px; bottom: 12px; }
   .c-tr { right: 12px; top: 12px; } .c-tl { left: 12px; top: 12px; }
 
@@ -362,9 +360,15 @@ function controlInner(c) {
 }
 
 function mountPanel() {
-  if (document.getElementById(PANEL_ID)) return;
+  const old = document.getElementById(PANEL_ID);
+  if (old && old.dataset.instance === INSTANCE) return;
+  if (old) {
+    old.remove();
+    document.querySelectorAll(`.${MARK}, .stockcrab-trail`).forEach((el) => el.remove());
+  }
   const host = document.createElement("div");
   host.id = PANEL_ID;
+  host.dataset.instance = INSTANCE;
   const shadow = host.attachShadow({ mode: "open" });
   const sections = SECTIONS.map(
     ([id, title, list]) =>
@@ -487,26 +491,30 @@ function syncPanel() {
   syncHud(r);
 }
 
-// HUD rows: every feature that is switched on.
+// HUD rows: every feature that is switched on, as [name, value].
 function hudRows(s) {
   const optText = (key) => {
     const c = CONTROLS.find((x) => x.key === key);
     return (c.opts.find(([v]) => v === s[key]) || [, s[key]])[1];
   };
-  const rows = [["Engine", optText("model")]];
+  const [model, build] = optText("model").split(" · ");
+  const rows = [[model.replace(/\s+/g, ""), build ? build.replace(/^\w/, (c) => c.toUpperCase()) : ""]];
   if (searching(s)) {
-    rows.push(["Strength", s.strengthBy === "skill" ? `Skill ${s.skill}` : s.elo >= 3190 ? "max" : `${s.elo} Elo`]);
-    rows.push(["Think", [(s.movetime / 1000).toFixed(1) + " s", s.depth && `depth ${s.depth}`, s.nodes && nodesText(s.nodes) + " nodes"].filter(Boolean).join(" · ")]);
+    rows.push(["Strength", s.strengthBy === "skill" ? `Skill ${s.skill}` : s.elo >= 3190 ? "Max" : `${s.elo} Elo`]);
+    rows.push(["ThinkTime", (s.movetime / 1000).toFixed(1) + "s"]);
+    if (s.depth) rows.push(["MaxDepth", String(s.depth)]);
+    if (s.nodes) rows.push(["MaxNodes", nodesText(s.nodes)]);
     if (s.aggression) rows.push(["Aggression", s.aggression + "%"]);
-    if (s.premove) rows.push(["Premove", optText("premoveMode")]);
+    if (s.premove) rows.push(["Premove", { smart: "Smart", likely: "Likely", safe: "Safe" }[s.premoveMode] || s.premoveMode]);
+    if (s.useNnue === false && modelInfo(s).nnue) rows.push(["ClassicalEval", ""]);
   } else rows.push(["Players", String(s.maiaRating)]);
-  if (s.others) rows.push(["Other moves", String(s.others)]);
-  if (s.showWdl) rows.push(["Win / draw / loss", "on"]);
-  if (s.openingWhite) rows.push(["Opening · White", s.openingWhite]);
-  if (s.openingBlack) rows.push(["Opening · Black", s.openingBlack]);
-  if (s.flowColours !== "off") rows.push(["Flowing colours", optText("flowColours").split(" (")[0]]);
-  if (s.blur) rows.push(["Blur", s.blur + " px"]);
-  if (s.cursorTrail) rows.push(["Cursor trail", "on"]);
+  if (s.others) rows.push(["OtherMoves", String(s.others)]);
+  if (s.showWdl) rows.push(["WinDrawLoss", ""]);
+  if (s.openingWhite) rows.push(["WhiteOpening", s.openingWhite]);
+  if (s.openingBlack) rows.push(["BlackOpening", s.openingBlack]);
+  if (s.flowColours !== "off") rows.push(["FlowColours", s.flowColours === "duo" ? "Duo" : "Crab"]);
+  if (s.blur) rows.push(["Blur", s.blur + "px"]);
+  if (s.cursorTrail) rows.push(["CursorTrail", ""]);
   if (s.hotkey) rows.push(["Hotkey", "Alt+X"]);
   return rows;
 }
@@ -518,12 +526,16 @@ function syncHud(r) {
   if (hud.hidden) return;
   hud.classList.toggle("right", settings.corner === "tl");
   const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
-  const html = `<div class="hh"><span class="dot"></span>StockCrab</div>` +
-    hudRows(settings).map(([k, v]) => `<div class="hr"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
-  if (hud.dataset.html !== html) {
-    hud.innerHTML = html;
-    hud.dataset.html = html;
-  }
+  const html = hudRows(settings).map(([k, v]) => `<div class="hl">${esc(k)}${v ? `<span>[${esc(v)}]</span>` : ""}</div>`).join("");
+  if (hud.dataset.html === html) return;
+  hud.innerHTML = html;
+  hud.dataset.html = html;
+  // widest line first, the colour wave runs down the list
+  const lines = [...hud.children].map((el) => [el, el.getBoundingClientRect().width]).sort((a, b) => b[1] - a[1]);
+  lines.forEach(([el], i) => {
+    el.style.animationDelay = (-i * 0.16).toFixed(2) + "s";
+    hud.appendChild(el);
+  });
 }
 
 function syncPresets(r) {
