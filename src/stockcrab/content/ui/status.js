@@ -39,7 +39,7 @@ function listMoves(marks, animate = false) {
     sc.style.color = textOn(col);
     row.append(chip, name, sc);
     box.appendChild(row);
-    if (animate && settings.animate && !reducedMotion()) {
+    if (animate && settings.animate) {
       animateIn(row, [{ opacity: 0, transform: "translateY(4px)" }, { opacity: 1, transform: "translateY(0)" }], (box.children.length - 1) * 45, 160);
     }
   }

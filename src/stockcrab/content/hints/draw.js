@@ -4,7 +4,7 @@ const fading = new WeakSet();
 
 // Removes the hints, optionally fading out.
 function clearMarks(fade = false) {
-  const soft = fade && settings.animate && !reducedMotion();
+  const soft = fade && settings.animate;
   document.querySelectorAll("." + MARK).forEach((el) => {
     if (fading.has(el)) return;
     if (soft && el.animate) {
@@ -61,14 +61,7 @@ function squareRect(board, sq, boardRect) {
 
 const FONT = '"Inter","SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
 
-// Appearance animations.
-const reducedMotion = () => {
-  try {
-    return matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch (e) {
-    return false;
-  }
-};
+// Appearance animations (the panel switches decide, not the system's reduced-motion setting).
 function animateIn(el, frames, delay = 0, duration = 180) {
   if (!el || !el.animate) return;
   try {
@@ -103,7 +96,7 @@ let flowCounter = 0;
 
 // Draws all hints as one SVG over the board.
 function drawMarks(board, marks, animate = false) {
-  const anim = animate && settings.animate && !reducedMotion();
+  const anim = animate && settings.animate;
   clearMarks(anim);
   current = null;
   if (!marks.length) return;
@@ -125,9 +118,7 @@ function drawMarks(board, marks, animate = false) {
     g.appendChild(svgEl("stop", { offset: 0, "stop-color": col }));
     const other = mode === "duo" ? (col.toLowerCase() === String(settings.colourPremove).toLowerCase() ? settings.colourBest : settings.colourPremove) : deepShade(col);
     g.appendChild(svgEl("stop", { offset: 1, "stop-color": other }));
-    if (!reducedMotion()) {
-      g.appendChild(svgEl("animateTransform", { attributeName: "gradientTransform", type: "translate", from: "0 0", to: `${2 * span} ${2 * span}`, dur: "2.6s", repeatCount: "indefinite" }));
-    }
+    g.appendChild(svgEl("animateTransform", { attributeName: "gradientTransform", type: "translate", from: "0 0", to: `${2 * span} ${2 * span}`, dur: "2.6s", repeatCount: "indefinite" }));
     defs.appendChild(g);
     return (paints[col] = `url(#${id})`);
   };

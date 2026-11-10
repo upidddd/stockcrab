@@ -71,6 +71,57 @@ function centipawns([l, d, w]) {
   return Math.round(Math.log(p / (1 - p)) / 0.00368208);
 }
 
+// Short forced mates (Maia has no search). Throws OUT_OF_TIME after the deadline.
+const OUT_OF_TIME = {};
+let deadline = 0;
+
+// Side to move mates within n moves.
+function canMate(c, n) {
+  const moves = c.moves({ verbose: true });
+  if (moves.some((m) => m.san.endsWith("#"))) return true;
+  if (n <= 1) return false;
+  moves.sort((a, b) => /\+/.test(b.san) - /\+/.test(a.san));
+  for (const m of moves) {
+    if (performance.now() > deadline) throw OUT_OF_TIME;
+    c.move(m);
+    const ok = mustLose(c, n - 1);
+    c.undo();
+    if (ok) return true;
+  }
+  return false;
+}
+
+// Side to move is mated within n moves of the other side, whatever it plays.
+function mustLose(c, n) {
+  const replies = c.moves({ verbose: true });
+  if (!replies.length) return c.inCheck();
+  for (const r of replies) {
+    c.move(r);
+    const ok = canMate(c, n);
+    c.undo();
+    if (!ok) return false;
+  }
+  return true;
+}
+
+// Mate scores for the ranked moves: "mate 3" we mate, "mate -2" they mate.
+function findMates(after, ms) {
+  const found = after.map((c) => (c.isCheckmate() ? 1 : 0));
+  deadline = performance.now() + ms;
+  try {
+    for (let n = 1; n <= 3; n++) {
+      after.forEach((c, i) => {
+        if (found[i] || c.isGameOver()) return;
+        if (n > 1 && mustLose(c, n - 1)) found[i] = n;
+        else if (canMate(c, n)) found[i] = -n;
+      });
+    }
+  } catch (e) {
+    if (e !== OUT_OF_TIME) throw e;
+  }
+  return found;
+}
+
 async function infer(positions, self, oppo) {
   const n = positions.length;
   const data = new Float32Array(n * 64 * 12);
@@ -111,15 +162,17 @@ async function go(board) {
   });
   const live = after.filter((c) => !c.isGameOver());
   const values = live.length ? (await infer(live, oppo, rating)).values : [];
+  const mates = findMates(after, 300);
   const ms = Math.max(1, Math.round(performance.now() - t0));
   let k = 0;
   ranked.forEach(({ move, share }, i) => {
     const c = after[i];
     let score, wdl;
-    if (c.isCheckmate()) (score = "mate 1"), (wdl = [1, 0, 0]);
+    if (!c.isGameOver()) k++;
+    if (mates[i]) (score = "mate " + mates[i]), (wdl = mates[i] > 0 ? [1, 0, 0] : [0, 0, 1]);
     else if (c.isGameOver()) (score = "cp 0"), (wdl = [0, 1, 0]);
     else {
-      const j = k++;
+      const j = k - 1;
       const [theirL, d, theirW] = probabilities(values[j * 3], values[j * 3 + 1], values[j * 3 + 2]);
       wdl = [theirL, d, theirW];
       score = "cp " + centipawns([theirW, d, theirL]);

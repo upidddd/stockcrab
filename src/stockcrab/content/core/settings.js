@@ -18,7 +18,7 @@ const DEFAULTS = {
   useNnue: true, // Fairy-Stockfish: NNUE or classical evaluation
   maiaRating: 1500,
   maiaOppo: 500, // 500 = same as maiaRating
-  maiaShow: "share", // card shows "share" of players or "score"
+  maiaShow: "score", // card shows "share" of players or "score"
   maiaMinShare: 5, // % of players
   // moves
   others: 2, // extra moves next to the best one

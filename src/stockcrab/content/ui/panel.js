@@ -106,8 +106,8 @@ const BUILTIN_PRESETS = {
   "Deep analysis": { model: "sf19-full", strengthBy: "elo", elo: 3190, movetime: 15000, depth: 0, nodes: 0, others: 3, goodWithin: 60, showWdl: true, premove: false },
   "Quick hints": { model: "sf19-lite", strengthBy: "elo", elo: 3190, movetime: 1000, depth: 0, nodes: 0, others: 1 },
   "Club player · 1600": { model: "sf19-full", strengthBy: "elo", elo: 1600, movetime: 2000, depth: 0, nodes: 0, others: 0 },
-  "Human moves · Maia 1500": { model: "maia3", maiaRating: 1500, maiaOppo: 500, maiaShow: "share", maiaMinShare: 5, others: 2 },
-  "Human moves · Maia 2200": { model: "maia3", maiaRating: 2200, maiaOppo: 500, maiaShow: "share", maiaMinShare: 5, others: 2 },
+  "Human moves · Maia 1500": { model: "maia3", maiaRating: 1500, maiaOppo: 500, maiaShow: "score", maiaMinShare: 5, others: 2 },
+  "Human moves · Maia 2200": { model: "maia3", maiaRating: 2200, maiaOppo: 500, maiaShow: "score", maiaMinShare: 5, others: 2 },
   "Fairy-Stockfish": { model: "fairy", useNnue: true, strengthBy: "elo", elo: 3190, movetime: 4000, depth: 0, nodes: 0 },
   "Clean look": { others: 0, showOutline: false, showLabels: true, showSquare: false, blur: 0, opacity: 80, flowColours: "off" },
 };
