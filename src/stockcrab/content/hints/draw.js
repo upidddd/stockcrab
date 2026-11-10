@@ -93,6 +93,18 @@ function textOn(hex) {
 
 // Arrows, square outlines and score badges as one SVG in the board's own pixel space.
 // Every part can be switched off or restyled from the panel.
+// A deeper shade of a colour for the second stop of the flowing gradient; the brand orange gets the crab's own outline red.
+function deepShade(hex) {
+  if (/^#e4572e$/i.test(hex)) return "#a8341a";
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const f = (v) => Math.round(v * 0.68).toString(16).padStart(2, "0");
+  return "#" + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
+}
+const PROMOTION = { q: "= Queen", r: "= Rook", b: "= Bishop", n: "= Knight" };
+let flowCounter = 0;
+
 function drawMarks(board, marks, animate = false) {
   const anim = animate && settings.animate && !reducedMotion();
   clearMarks(anim);
@@ -101,6 +113,29 @@ function drawMarks(board, marks, animate = false) {
   if (getComputedStyle(board).position === "static") board.style.position = "relative";
   const br = board.getBoundingClientRect();
   const svg = svgEl("svg", { class: MARK, width: br.width, height: br.height, viewBox: `0 0 ${br.width} ${br.height}` });
+  // Flowing colours: a move is painted with a gradient that slowly drifts across the board, either from its colour to
+  // a deeper shade of it ("crab": the brand orange and the crab's outline red) or between the two colours of the
+  // panel, orange and cyan ("duo"). "off": plain colours; with reduced motion the gradient stands still.
+  const defs = svgEl("defs", {});
+  svg.appendChild(defs);
+  const flowId = ++flowCounter;
+  const paints = {};
+  const paint = (col) => {
+    const mode = settings.flowColours === true ? "crab" : settings.flowColours;
+    if (!mode || mode === "off") return col;
+    if (paints[col]) return paints[col];
+    const id = `stockcrab-flow-${flowId}-${Object.keys(paints).length}`;
+    const span = (br.width / 8) * 1.1; // about one cell from one colour to the other
+    const g = svgEl("linearGradient", { id, gradientUnits: "userSpaceOnUse", x1: 0, y1: 0, x2: span, y2: span, spreadMethod: "reflect" });
+    g.appendChild(svgEl("stop", { offset: 0, "stop-color": col }));
+    const other = mode === "duo" ? (col.toLowerCase() === String(settings.colourPremove).toLowerCase() ? settings.colourBest : settings.colourPremove) : deepShade(col);
+    g.appendChild(svgEl("stop", { offset: 1, "stop-color": other }));
+    if (!reducedMotion()) {
+      g.appendChild(svgEl("animateTransform", { attributeName: "gradientTransform", type: "translate", from: "0 0", to: `${2 * span} ${2 * span}`, dur: "2.6s", repeatCount: "indefinite" }));
+    }
+    defs.appendChild(g);
+    return (paints[col] = `url(#${id})`);
+  };
   svg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:20;overflow:visible";
   const k = settings.lineWidth / 100;
   const infos = []; // per move: the icon and the card to place on its target cell
@@ -148,7 +183,7 @@ function drawMarks(board, marks, animate = false) {
       for (const r of [from, to]) {
         const outline = svgEl("rect", {
           x: r.x + ow / 2, y: r.y + ow / 2, width: r.w - ow, height: r.h - ow,
-          fill: "none", stroke: m.kind === "premove" ? settings.colourPremove : settings.colourOutline, "stroke-width": ow, "stroke-linejoin": "miter",
+          fill: "none", stroke: paint(m.kind === "premove" ? settings.colourPremove : settings.colourOutline), "stroke-width": ow, "stroke-linejoin": "miter",
         });
         shape.appendChild(outline);
         if (anim) animateIn(outline, [{ opacity: 0 }, { opacity: 1 }], 0, 160);
@@ -177,7 +212,7 @@ function drawMarks(board, marks, animate = false) {
       const y2 = by + uy * hl * 0.2;
       const line = svgEl("line", {
         x1: fc.x, y1: fc.y, x2, y2, "stroke-linecap": "round",
-        stroke: col, "stroke-width": lw,
+        stroke: paint(col), "stroke-width": lw,
       });
       shape.appendChild(line);
       if (anim) {
@@ -189,7 +224,7 @@ function drawMarks(board, marks, animate = false) {
         const tip = { x: tc.x - ux * sq * 0.03, y: tc.y - uy * sq * 0.03 };
         const headEl = svgEl("polygon", {
           points: `${tip.x},${tip.y} ${bx - uy * hw},${by + ux * hw} ${bx + uy * hw},${by - ux * hw}`,
-          fill: col, stroke: col, "stroke-width": sq * 0.025, "stroke-linejoin": "round",
+          fill: paint(col), stroke: paint(col), "stroke-width": sq * 0.025, "stroke-linejoin": "round",
         });
         shape.appendChild(headEl);
         // the head appears just before the line reaches it, growing out of the tip
@@ -222,7 +257,8 @@ function drawMarks(board, marks, animate = false) {
     // cell's name if switched on). It is placed in the last pass, once its size is known, in a corner of the cell the
     // arrow does not touch.
     const score = settings.showLabels && m.label ? m.label : "";
-    const words = [settings.showSquare && m.move.slice(2, 4), m.kind === "premove" && "premove"].filter(Boolean).join(" · ");
+    // the piece a pawn promotes to is always written on the card ("= Queen", "= Knight" ...)
+    const words = [PROMOTION[m.move[4]], settings.showSquare && m.move.slice(2, 4), m.kind === "premove" && "premove"].filter(Boolean).join(" · ");
     const info = { to, sq, op, card: null };
     if (score || words) {
       const text = (str, fs, weight, extra = "") => {
@@ -233,7 +269,8 @@ function drawMarks(board, marks, animate = false) {
         t.textContent = str;
         return t;
       };
-      const card = svgEl("rect", { fill: col, opacity: Math.min(1, op + 0.05) });
+      // the card flows too when its text is white (on a light colour such as the premove cyan it stays plain, for contrast)
+      const card = svgEl("rect", { fill: textOn(col) === "#fff" && settings.flowColours !== "duo" ? paint(col) : col, opacity: Math.min(1, op + 0.05) });
       const t1 = score ? text(score, sq * (alt ? 0.125 : 0.14), 700) : null;
       const t2 = words ? text(words, sq * 0.09, 500, "opacity:.92") : null;
       svg.appendChild(card);

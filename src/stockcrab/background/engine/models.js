@@ -12,6 +12,10 @@ const MODELS = {
   "sf17-lite": { name: "Stockfish 17.1 Lite", file: "engine/sf17/stockfish-17.1-lite-single-03e3232.js", bootMs: 25000, maxHash: 256 },
   "sf11": { name: "Stockfish 11 Classic", file: "engine/sf11/stockfish.js", bootMs: 20000, maxHash: 64, noElo: true },
   "sf19-asm": { name: "Stockfish 19 JavaScript", file: "engine/stockfish-19-asm.js", bootMs: 30000, maxHash: 32 },
+  // single-threaded build of ours (engine/fairy/README.txt); its UCI_Elo goes from 500 to 2850
+  "fairy": { name: "Fairy-Stockfish", file: "engine/fairy/fairy-stockfish.js", bootMs: 60000, maxHash: 256, elo: [500, 2850] },
+  // a neural network that plays like people of the chosen rating (600 to 2600); no search, depth 1
+  "maia3": { name: "Maia 3", file: "engine/maia/maia-uci.js", bootMs: 60000, maxHash: 256, elo: [600, 2600] },
 };
 const DEFAULT_MODEL = "sf19-full";
 const FALLBACKS = ["sf19-full", "sf19-lite"]; // tried in this order if the chosen model does not start

@@ -29,7 +29,9 @@ function start(req) {
     send(`setoption name Skill Level value ${Math.max(0, Math.min(20, Math.round(((req.elo - 1320) / (3190 - 1320)) * 20)))}`);
   } else {
     send("setoption name UCI_LimitStrength value true");
-    send(`setoption name UCI_Elo value ${req.elo}`);
+    // an Elo outside the engine's own range would be ignored, so bring it inside
+    const [lo, hi] = model.elo || [0, Infinity];
+    send(`setoption name UCI_Elo value ${Math.max(lo, Math.min(hi, req.elo))}`);
   }
   const hash = Math.min(req.hash || 128, model.maxHash);
   if (hash !== currentHash) {

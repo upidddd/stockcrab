@@ -43,6 +43,7 @@ const DEFAULTS = {
   showSquare: false, // the target cell's name in the card (off by default: the position already says it)
   version: 3, // settings layout version, for migrating saved values
   animate: true, // short appearance animations for new hints
+  flowColours: "crab", // drifting gradient on the hints: "crab" (orange and the crab's red), "duo" (orange and cyan), "off"
   // panel
   corner: "br",
   hotkey: true,

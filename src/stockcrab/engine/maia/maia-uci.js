@@ -1,0 +1,193 @@
+// StockCrab · Maia 3 as a UCI engine
+// A worker that answers the extension in UCI, like the Stockfish builds do. Maia does not search: it is a
+// network that says how often players of a given rating play each move. "go" asks it once for the position
+// (which moves, in what share) and once more for the positions after its favourite moves (who is better there),
+// and reports those moves as MultiPV lines at depth 1, the most played first.
+
+const here = self.location.href.replace(/[^/]*$/, "");
+self.exports = {}; // chess.js is a CommonJS build; its class Chess also lands in this worker's global scope
+importScripts(here + "chess.js", here + "ort.wasm.min.js");
+
+ort.env.wasm.wasmPaths = here;
+ort.env.wasm.numThreads = 1; // no SharedArrayBuffer in an extension's background page
+ort.env.wasm.proxy = false;
+
+const RATING_MIN = 600; // the ratings Maia 3 learned from
+const RATING_MAX = 2600;
+const MOVE_COUNT = 4352; // 64 x 64 from-to pairs, then 256 promotions
+const PIECES = "PNBRQKpnbrqk";
+
+let session = null;
+let loadError = null;
+let readyWaiting = false;
+const options = { multipv: 1, limit: false, elo: 1500 };
+let board = new Chess();
+let searching = Promise.resolve();
+
+const say = (line) => postMessage(line);
+
+// The network always sees the board from White's side: with Black to move, the board is flipped and the colours swapped.
+const flipSquare = (sq) => sq[0] + (9 - Number(sq[1]));
+const flipMove = (uci) => flipSquare(uci.slice(0, 2)) + flipSquare(uci.slice(2, 4)) + uci.slice(4);
+
+function moveIndex(uci) {
+  const sq = (s) => (s.charCodeAt(0) - 97) + (Number(s[1]) - 1) * 8;
+  if (uci.length === 4) return sq(uci.slice(0, 2)) * 64 + sq(uci.slice(2, 4));
+  // promotions: from a7..h7 to a8..h8, queen, rook, bishop, knight
+  return 4096 + ((uci.charCodeAt(0) - 97) * 8 + (uci.charCodeAt(2) - 97)) * 4 + "qrbn".indexOf(uci[4]);
+}
+
+function tokens(chess, out, offset) {
+  const black = chess.turn() === "b";
+  const rows = chess.fen().split(" ")[0].split("/");
+  for (let r = 0; r < 8; r++) {
+    let file = 0;
+    for (const ch of rows[r]) {
+      if (ch >= "1" && ch <= "8") {
+        file += Number(ch);
+        continue;
+      }
+      let rank = 7 - r;
+      let piece = PIECES.indexOf(ch);
+      if (black) {
+        rank = 7 - rank;
+        piece = (piece + 6) % 12;
+      }
+      out[offset + (rank * 8 + file) * 12 + piece] = 1;
+      file++;
+    }
+  }
+}
+
+const uciOf = (m) => m.from + m.to + (m.promotion || "");
+
+// Who is better for the side to move: Maia's loss/draw/win guess, as centipawns.
+function centipawns(l, d, w) {
+  const top = Math.max(l, d, w);
+  const [el, ed, ew] = [l, d, w].map((x) => Math.exp(x - top));
+  const p = Math.min(0.999, Math.max(0.001, (ew + 0.5 * ed) / (el + ed + ew)));
+  return Math.round(Math.log(p / (1 - p)) / 0.00368208); // the inverse of the panel's win-chance curve
+}
+
+async function infer(positions, rating) {
+  const n = positions.length;
+  const data = new Float32Array(n * 64 * 12);
+  positions.forEach((chess, i) => tokens(chess, data, i * 64 * 12));
+  const elo = new Float32Array(n).fill(rating);
+  const out = await session.run({
+    tokens: new ort.Tensor("float32", data, [n, 64, 12]),
+    elo_self: new ort.Tensor("float32", elo, [n]),
+    elo_oppo: new ort.Tensor("float32", elo.slice(), [n]),
+  });
+  return { moves: out.logits_move.data, values: out.logits_value.data };
+}
+
+async function go(board) {
+  const t0 = performance.now();
+  const legal = board.moves({ verbose: true });
+  if (!legal.length) {
+    say(board.inCheck() ? "info depth 0 score mate 0" : "info depth 0 score cp 0");
+    say("bestmove (none)");
+    return;
+  }
+  const rating = options.limit ? Math.min(RATING_MAX, Math.max(RATING_MIN, options.elo)) : RATING_MAX;
+  const black = board.turn() === "b";
+  const root = await infer([board], rating);
+  const logits = legal.map((m) => root.moves[moveIndex(black ? flipMove(uciOf(m)) : uciOf(m))]);
+  const top = Math.max(...logits);
+  const sum = logits.reduce((s, x) => s + Math.exp(x - top), 0);
+  const ranked = legal
+    .map((m, i) => ({ move: m, share: Math.exp(logits[i] - top) / sum }))
+    .sort((a, b) => b.share - a.share)
+    .slice(0, Math.max(1, Math.min(options.multipv, legal.length)));
+
+  // the position after each of those moves, scored for the side that just moved
+  const after = ranked.map(({ move }) => {
+    const c = new Chess(board.fen());
+    c.move(move);
+    return c;
+  });
+  const live = after.filter((c) => !c.isGameOver());
+  const values = live.length ? (await infer(live, rating)).values : [];
+  const ms = Math.max(1, Math.round(performance.now() - t0));
+  let k = 0;
+  ranked.forEach(({ move }, i) => {
+    const c = after[i];
+    let score;
+    if (c.isCheckmate()) score = "mate 1";
+    else if (c.isGameOver()) score = "cp 0";
+    else {
+      const j = k++;
+      score = "cp " + -centipawns(values[j * 3], values[j * 3 + 1], values[j * 3 + 2]);
+    }
+    say(`info depth 1 seldepth 1 multipv ${i + 1} score ${score} nodes ${ranked.length + 1} time ${ms} pv ${uciOf(move)}`);
+  });
+  say(`bestmove ${uciOf(ranked[0].move)}`);
+}
+
+function position(args) {
+  const words = args.trim().split(/\s+/);
+  const at = words.indexOf("moves");
+  const head = at < 0 ? words : words.slice(0, at);
+  const fen = head[0] === "fen" ? head.slice(1).join(" ") : undefined;
+  try {
+    board = fen ? new Chess(fen) : new Chess();
+  } catch (e) {
+    board = new Chess(fen, { skipValidation: true });
+  }
+  for (const uci of at < 0 ? [] : words.slice(at + 1)) {
+    try {
+      board.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
+    } catch (e) {
+      break; // an illegal move: keep the position before it
+    }
+  }
+}
+
+function setoption(args) {
+  const m = /^name\s+(.+?)(?:\s+value\s+(.*))?$/i.exec(args.trim());
+  if (!m) return;
+  const name = m[1].toLowerCase();
+  const value = (m[2] || "").trim();
+  if (name === "multipv") options.multipv = Math.max(1, Math.min(64, parseInt(value, 10) || 1));
+  else if (name === "uci_limitstrength") options.limit = value === "true";
+  else if (name === "uci_elo") options.elo = parseInt(value, 10) || options.elo;
+}
+
+const loading = (async () => {
+  try {
+    const bytes = await (await fetch(here + "maia3_simplified.onnx")).arrayBuffer();
+    session = await ort.InferenceSession.create(bytes, { graphOptimizationLevel: "basic", executionProviders: ["wasm"] });
+  } catch (e) {
+    loadError = String((e && e.message) || e);
+    say("info string Maia did not start: " + loadError);
+  }
+  if (readyWaiting && session) say("readyok");
+})();
+
+self.onmessage = (e) => {
+  for (const line of String(e.data).split("\n")) {
+    const [cmd, ...rest] = line.trim().split(/\s+/);
+    const args = rest.join(" ");
+    if (cmd === "uci") {
+      say("id name Maia 3");
+      say("id author CSSLab, University of Toronto");
+      say(`option name MultiPV type spin default 1 min 1 max 64`);
+      say(`option name UCI_LimitStrength type check default false`);
+      say(`option name UCI_Elo type spin default 1500 min ${RATING_MIN} max ${RATING_MAX}`);
+      say("uciok");
+    } else if (cmd === "isready") {
+      if (session) say("readyok");
+      else if (!loadError) readyWaiting = true; // answered once the model is loaded; a failed load stays silent so the host falls back
+    } else if (cmd === "setoption") setoption(args);
+    else if (cmd === "position") position(args);
+    else if (cmd === "go") {
+      const at = board;
+      // one request at a time; "stop" needs nothing, the answer comes within a moment anyway
+      searching = searching.then(() => loading).then(() => (session ? go(at) : say("bestmove (none)"))).catch((err) => {
+        say("info string Maia failed: " + ((err && err.message) || err));
+        say("bestmove (none)");
+      });
+    }
+  }
+};

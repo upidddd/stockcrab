@@ -36,14 +36,12 @@ Best move, other good moves with a score for each, and a premove while your oppo
 </tr>
 </table>
 
-> The screenshots, the banner and the intro video were made with an earlier version that also rated moves (Brilliant, Best, ...). That feature has been removed.
-
 ## Features
 
-- **Hints on the board.** An arrow and outlined squares for the best move, a compact card on the target square with its score, plus up to three other good moves, drawn thinner. Everything is translucent, with an optional blur under the arrows.
+- **Hints on the board.** An arrow and outlined squares for the best move, a compact card on the target square with its score, plus up to three other good moves, drawn thinner. The colours slowly flow (orange and the crab's red, or orange and cyan, or off), a promotion says which piece (*= Queen*), and there is an optional blur under the arrows.
 - **Premoves.** While your opponent thinks, StockCrab can show the reply worth premoving, in three styles, including a rule-based pawn retake ([how](#premoves)).
 - **You choose the opponent.** Strength from Elo 1320 up to full strength, think time, depth limit, hash size, and an optional aggression slider (it gives up a little strength for sharper play).
-- **Six engines.** Stockfish 19 (Full, Lite, JavaScript), Stockfish 17.1 (Full, Lite) and Stockfish 11 classic, with an automatic fallback if one does not start ([engines](#engines)).
+- **Eight engines.** Stockfish 19 (Full, Lite, JavaScript), Stockfish 17.1 (Full, Lite), Stockfish 11 classic, Fairy-Stockfish and Maia 3, a network that plays like people of a given rating. If one does not start, another takes over ([engines](#engines)).
 - **Honest numbers.** Only exact scores are used, lines come from the last *complete* depth, and a move never borrows the score of another move.
 - **Works on both sites.** chess.com and lichess, including analysis boards and puzzles (set *I play: Whoever is to move*).
 - **A panel that stays out of the way.** Flat and compact, light and dark theme, brand orange, `Alt+X` to switch on and off, four corners to dock to.
@@ -100,7 +98,7 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 | **Engine** | strength (Elo 1320 … max), think time (0.5 – 30 s), depth limit, aggression, hash (16 – 256 MB), model |
 | **Moves** | how many other good moves (0 – 3) and how far behind they may be, score units, the move list in the panel |
 | **Premove** | on or off, style, how sure the style has to be, how many likely replies are checked and for how long |
-| **Look** | colours, line width, opacity, blur under the hints, outline, arrow head, score, cell name, animations |
+| **Look** | colours, flowing colours, line width, opacity, blur under the hints, outline, arrow head, score, cell name, animations |
 | **Panel** | corner, which side I play, the `Alt+X` hotkey |
 
 ## Engines
@@ -112,8 +110,10 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 | Stockfish 19 · JavaScript | no WebAssembly, slowest, a last resort |
 | Stockfish 17.1 · Full / Lite | the previous generation |
 | Stockfish 11 · Classic | no Elo option in this build, so Elo is mapped onto Skill Level |
+| Fairy-Stockfish | another engine of the Stockfish family, with Stockfish's NNUE network; Elo 500 – 2850 |
+| Maia 3 · human-like | not a search: a neural network that suggests the moves people of the chosen rating (600 – 2600) play most, the most popular first; its scores are the network's own guess |
 
-All of them are builds of [stockfish.js](https://github.com/nmrugg/stockfish.js) (GPLv3), which is based on [Stockfish](https://github.com/official-stockfish/Stockfish).
+The Stockfish models are builds of [stockfish.js](https://github.com/nmrugg/stockfish.js) (GPLv3), which is based on [Stockfish](https://github.com/official-stockfish/Stockfish). [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) (GPLv3) is built here single-threaded for the browser (`tools/fairy-stockfish/`). [Maia 3](https://github.com/CSSLab/maia-platform-frontend) is by the CSSLab, University of Toronto (GPLv3), and runs on [ONNX Runtime Web](https://github.com/microsoft/onnxruntime) (MIT) with [chess.js](https://github.com/jhlywa/chess.js) (BSD-2-Clause) for the rules.
 
 ## How it works
 
@@ -145,12 +145,12 @@ StockCrab shows engine moves in real time. That is great for **analysis, practic
 src/stockcrab/       the extension: this folder is what Firefox loads
   content/           runs on the pages: board/ hints/ ui/ core/
   background/        hosts the engine: engine/ premove/
-  engine/            Stockfish builds and their licences
+  engine/            the engine builds (Stockfish, Fairy-Stockfish, Maia 3) and their licences
   assets/            the extension's icon
 docs/                banner, screenshots, the intro video, architecture notes
 packaging/           build_xpi.py (Firefox .xpi), build_chrome.py (Chrome folder and .zip)
 platforms/chrome/    the Chrome glue: service worker, offscreen engine host, API shims
-tools/               check.py checks the manifest and the scripts
+tools/               check.py checks the manifest and the scripts; fairy-stockfish/ builds Fairy-Stockfish
 .github/workflows/   builds both packages on every push and attaches them to a release
 ```
 
@@ -168,7 +168,7 @@ tools/               check.py checks the manifest and the scripts
 | **Move finder** | `content/board/moves.js` | which move turned one position into the next (lichess side to move) |
 | **Panel** | `content/ui/panel.js`, `content/ui/status.js` | the settings panel, its status line and move list |
 | **Settings** | `content/core/settings.js` | defaults, saving, migration |
-| **Engine registry** | `background/engine/models.js` | the six Stockfish builds |
+| **Engine registry** | `background/engine/models.js` | the eight engine models |
 | **Search runner** and **Search queue** | `background/engine/search.js`, `queue.js` | one search at a time, a newer request replaces the waiting one |
 | **UCI line builder** | `background/engine/uci-lines.js` | exact scores only, lines from the last complete depth |
 | **Engine boot and recovery** | `background/engine/boot.js` | starts the engine, falls back to another build, restarts after a crash |

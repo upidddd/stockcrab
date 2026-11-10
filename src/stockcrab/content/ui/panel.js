@@ -9,6 +9,8 @@ const MODEL_OPTIONS = [
   ["sf17-lite", "Stockfish 17.1 · Lite"],
   ["sf11", "Stockfish 11 · Classic"],
   ["sf19-asm", "Stockfish 19 · JavaScript"],
+  ["fairy", "Fairy-Stockfish"],
+  ["maia3", "Maia 3 · human-like"],
 ];
 
 const SECTIONS = [
@@ -51,6 +53,7 @@ const SECTIONS = [
     { key: "showLabels", type: "check", label: "Score on the board", fx: "render" },
     { key: "showSquare", type: "check", label: "Cell name in the card", fx: "render" },
     { key: "animate", type: "check", label: "Animate new hints", fx: "panel" },
+    { key: "flowColours", type: "select", label: "Flowing colours", opts: [["crab", "Crab (orange · red)"], ["duo", "Orange · cyan"], ["off", "Off"]], fx: "render" },
   ]],
   ["panel", "Panel", [
     { key: "corner", type: "select", label: "Position", opts: [["br", "Bottom right"], ["bl", "Bottom left"], ["tr", "Top right"], ["tl", "Top left"]], fx: "panel" },
