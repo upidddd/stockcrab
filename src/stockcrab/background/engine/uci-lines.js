@@ -1,9 +1,6 @@
-//! StockCrab · UCI line builder
-//! Reads the engine's info lines: only exact scores, lines from the last complete depth.
-//! File: background/engine/uci-lines.js. A background script (hosts the engine); files of one kind share a single global scope and load in the order of manifest.json.
+// Parses the engine's info lines.
 
-// Only exact scores are kept (an aspiration-window "lowerbound"/"upperbound" is not a result), and every
-// line is remembered per depth, so the answer can be built from one finished iteration instead of a mix.
+// Keeps exact scores per line and depth.
 function parseInfo(req, line) {
   if (!req.hist || !line.startsWith("info") || !line.includes(" pv ")) return;
   if (/\b(lowerbound|upperbound)\b/.test(line)) return;
@@ -18,11 +15,11 @@ function parseInfo(req, line) {
   const score = mate ? (m > 0 ? 100000 - m : -100000 - m) : Number(cp[1]);
   const byDepth = req.hist.get(mpv) ?? new Map();
   byDepth.set(depth, { depth, move, pv, score, mate: m });
-  while (byDepth.size > 4) byDepth.delete(Math.min(...byDepth.keys())); // only the latest few depths matter
+  while (byDepth.size > 4) byDepth.delete(Math.min(...byDepth.keys()));
   req.hist.set(mpv, byDepth);
 }
 
-// The lines of the last COMPLETE iteration: the deepest depth that every line reached, in the engine's own order.
+// Lines of the last complete depth.
 function finalLines(req) {
   const idx = [...req.hist.keys()].sort((a, b) => a - b);
   if (!idx.length) return { lines: [], depth: 0 };
@@ -36,7 +33,7 @@ function finalLines(req) {
   return { lines: latest, depth: Math.min(...latest.map((l) => l.depth)) };
 }
 
-// The deepest result recorded for one particular move (used when the engine plays a move that is not among the lines).
+// Deepest result for one move.
 function deepestFor(req, move) {
   let best = null;
   for (const byDepth of req.hist.values()) {

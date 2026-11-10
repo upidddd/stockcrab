@@ -1,20 +1,16 @@
-// StockCrab · Maia 3 as a UCI engine
-// A worker that answers the extension in UCI, like the Stockfish builds do. Maia does not search: it is a
-// network that says how often players of a given rating play each move. "go" asks it once for the position
-// (which moves, in what share) and once more for the positions after its favourite moves (who is better there),
-// and reports those moves as MultiPV lines at depth 1, the most played first.
+// Maia 3 as a UCI engine (depth 1, most played moves first).
 
 const here = self.location.href.replace(/[^/]*$/, "");
-self.exports = {}; // chess.js is a CommonJS build; its class Chess also lands in this worker's global scope
+self.exports = {};
 importScripts(here + "chess.js", here + "ort.wasm.min.js");
 
 ort.env.wasm.wasmPaths = here;
-ort.env.wasm.numThreads = 1; // no SharedArrayBuffer in an extension's background page
+ort.env.wasm.numThreads = 1;
 ort.env.wasm.proxy = false;
 
-const RATING_MIN = 600; // the ratings Maia 3 learned from
+const RATING_MIN = 600;
 const RATING_MAX = 2600;
-const MOVE_COUNT = 4352; // 64 x 64 from-to pairs, then 256 promotions
+const MOVE_COUNT = 4352;
 const PIECES = "PNBRQKpnbrqk";
 
 let session = null;
@@ -26,14 +22,14 @@ let searching = Promise.resolve();
 
 const say = (line) => postMessage(line);
 
-// The network always sees the board from White's side: with Black to move, the board is flipped and the colours swapped.
+// Board seen from White's side.
 const flipSquare = (sq) => sq[0] + (9 - Number(sq[1]));
 const flipMove = (uci) => flipSquare(uci.slice(0, 2)) + flipSquare(uci.slice(2, 4)) + uci.slice(4);
 
 function moveIndex(uci) {
   const sq = (s) => (s.charCodeAt(0) - 97) + (Number(s[1]) - 1) * 8;
   if (uci.length === 4) return sq(uci.slice(0, 2)) * 64 + sq(uci.slice(2, 4));
-  // promotions: from a7..h7 to a8..h8, queen, rook, bishop, knight
+  // promotions
   return 4096 + ((uci.charCodeAt(0) - 97) * 8 + (uci.charCodeAt(2) - 97)) * 4 + "qrbn".indexOf(uci[4]);
 }
 
@@ -61,12 +57,12 @@ function tokens(chess, out, offset) {
 
 const uciOf = (m) => m.from + m.to + (m.promotion || "");
 
-// Who is better for the side to move: Maia's loss/draw/win guess, as centipawns.
+// Value head as centipawns.
 function centipawns(l, d, w) {
   const top = Math.max(l, d, w);
   const [el, ed, ew] = [l, d, w].map((x) => Math.exp(x - top));
   const p = Math.min(0.999, Math.max(0.001, (ew + 0.5 * ed) / (el + ed + ew)));
-  return Math.round(Math.log(p / (1 - p)) / 0.00368208); // the inverse of the panel's win-chance curve
+  return Math.round(Math.log(p / (1 - p)) / 0.00368208);
 }
 
 async function infer(positions, rating) {
@@ -101,7 +97,6 @@ async function go(board) {
     .sort((a, b) => b.share - a.share)
     .slice(0, Math.max(1, Math.min(options.multipv, legal.length)));
 
-  // the position after each of those moves, scored for the side that just moved
   const after = ranked.map(({ move }) => {
     const c = new Chess(board.fen());
     c.move(move);
@@ -139,7 +134,7 @@ function position(args) {
     try {
       board.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] });
     } catch (e) {
-      break; // an illegal move: keep the position before it
+      break;
     }
   }
 }
@@ -178,12 +173,11 @@ self.onmessage = (e) => {
       say("uciok");
     } else if (cmd === "isready") {
       if (session) say("readyok");
-      else if (!loadError) readyWaiting = true; // answered once the model is loaded; a failed load stays silent so the host falls back
+      else if (!loadError) readyWaiting = true;
     } else if (cmd === "setoption") setoption(args);
     else if (cmd === "position") position(args);
     else if (cmd === "go") {
       const at = board;
-      // one request at a time; "stop" needs nothing, the answer comes within a moment anyway
       searching = searching.then(() => loading).then(() => (session ? go(at) : say("bestmove (none)"))).catch((err) => {
         say("info string Maia failed: " + ((err && err.message) || err));
         say("bestmove (none)");

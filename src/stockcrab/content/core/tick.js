@@ -1,9 +1,6 @@
-//! StockCrab · Main loop
-//! Every 250 ms: read the board, ask the engine, draw the answer; retries after a failure.
-//! File: content/core/tick.js. A content script (runs on chess.com and lichess pages); files of one kind share a single global scope and load in the order of manifest.json.
+// Main loop: read the board, ask the engine, draw the answer.
 
-// A position read from the screen that cannot exist (a piece caught in the middle of a move, two pieces on a square):
-// nothing is calculated from it. Returns the reason, or null.
+// Why a position read from the screen cannot exist, or null.
 function fenImpossible(fen) {
   const rows = fen.split(" ")[0].split("/");
   if (rows.length !== 8) return "not 8 ranks";
@@ -17,8 +14,7 @@ function fenImpossible(fen) {
 const kingCount = (fen) => (fen.split(" ")[0].match(/[kK]/g) || []).length;
 const pieceCount = (fen) => (fen.split(" ")[0].match(/[a-z]/gi) || []).length;
 
-// A request that failed (the background page was asleep, the engine timed out) is asked again after a pause that
-// grows with every failure (2 s, 4 s ... 15 s), instead of waiting for the position to change.
+// Retry delay after a failed request: 2 s, 4 s ... 15 s.
 function retryLater(id) {
   if (id !== requestId) return;
   retryAt = Date.now() + Math.min(15000, 2000 * 2 ** Math.min(failures, 4));
@@ -64,14 +60,13 @@ async function tick() {
   }
 
   if (isHolding(board)) {
-    candidateKey = null; // hold everything as it is until the piece is dropped and the board has settled
+    candidateKey = null;
     return;
   }
-  if (Date.now() < retryAt) return; // the last request failed: wait a little before asking again
+  if (Date.now() < retryAt) return;
 
   let fen = readFen(board);
   if (fenSource === "dom" || fenSource === "lichess") {
-    // a position read from the screen: check that it can exist, and repair a misread side to move
     const checked = sanitiseFen(fen);
     if (kingCount(fen) === 2 && !checked.ok) {
       setStatus("Position looks illegal (both kings attacked): the board was misread", "err");
@@ -84,7 +79,7 @@ async function tick() {
   }
   lastRead = `${fenSource} · ${fen}`;
   if ((fenSource.startsWith("dom") || fenSource.startsWith("lichess")) && fenImpossible(fen)) {
-    candidateKey = null; // the board is changing under our eyes: wait for it to settle
+    candidateKey = null;
     return;
   }
   if (kingCount(fen) !== 2) {
@@ -111,7 +106,7 @@ async function tick() {
   lastView = null;
   listMoves([]);
 
-  // "Whoever is to move" (analysis boards, puzzles, playing both sides): every position is mine
+  // "turn" mode: every position is mine
   const mine = settings.side === "turn" || fen.split(" ")[1] === myColour(board);
   if (!keepAlive) {
     try {

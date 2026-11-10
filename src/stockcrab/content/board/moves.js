@@ -1,10 +1,6 @@
-//! StockCrab · Move finder
-//! Plays a move on a board map and finds which move turned one position into the next (the lichess reader uses it for the side to move).
-//! File: content/board/moves.js. A content script (runs on chess.com and lichess pages); files of one kind share a single global scope and load in the order of manifest.json.
+// Plays moves on a board map and finds the move between two positions.
 
-// A sacrifice: a minor piece or more lands on a square where the opponent takes it (the engine's own line) and
-// nothing is taken back there, while the piece is worth clearly more than what it captured.
-// Plays an engine move (UCI) on a board map. Legality is the engine's business; this only moves the pieces.
+// Plays a UCI move on a board map (no legality check).
 function applyUci(map, move) {
   const from = move.slice(0, 2);
   const to = move.slice(2, 4);
@@ -14,7 +10,7 @@ function applyUci(map, move) {
   const white = piece === piece.toUpperCase();
   if (role === "p" && from[0] !== to[0] && !map[to]) delete map[to[0] + from[1]]; // en passant
   if (role === "k" && Math.abs(FILES.indexOf(from[0]) - FILES.indexOf(to[0])) === 2) {
-    const king = to[0] > from[0]; // castling: the rook jumps too
+    const king = to[0] > from[0]; // castling
     const rookFrom = (king ? "h" : "a") + from[1];
     map[(king ? "f" : "d") + from[1]] = map[rookFrom];
     delete map[rookFrom];
@@ -41,7 +37,7 @@ function placementOf(map) {
   return rows.join("/");
 }
 
-// The move that turned `before` into `after` (one move by the side to move in `before`), as "e2e4"/"e7e8q", or null.
+// The move between two positions, or null.
 function inferPlayed(before, after) {
   if (!before || !after) return null;
   const map0 = boardOf(before);

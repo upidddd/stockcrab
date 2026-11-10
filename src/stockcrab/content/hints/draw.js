@@ -1,10 +1,8 @@
-//! StockCrab · Hint painter
-//! Draws the arrows, outlines, cards and icons over the board (one SVG, one blur layer).
-//! File: content/hints/draw.js. A content script (runs on chess.com and lichess pages); files of one kind share a single global scope and load in the order of manifest.json.
+// Draws the hints (arrows, outlines, cards) over the board.
 
 const fading = new WeakSet();
 
-// Removes the drawn hint. With `fade` it dissolves for ~140 ms first (when animations are on).
+// Removes the hints, optionally fading out.
 function clearMarks(fade = false) {
   const soft = fade && settings.animate && !reducedMotion();
   document.querySelectorAll("." + MARK).forEach((el) => {
@@ -14,7 +12,7 @@ function clearMarks(fade = false) {
       try {
         const a = el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: "ease-in", fill: "forwards" });
         a.onfinish = () => el.remove();
-        setTimeout(() => el.remove(), 400); // safety net if the animation never reports back
+        setTimeout(() => el.remove(), 400);
         return;
       } catch (e) {}
     }
@@ -63,7 +61,7 @@ function squareRect(board, sq, boardRect) {
 
 const FONT = '"Inter","SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif';
 
-// Short, simple appearance animations (Web Animations API). Skipped when the page asks for reduced motion.
+// Appearance animations.
 const reducedMotion = () => {
   try {
     return matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -78,7 +76,7 @@ function animateIn(el, frames, delay = 0, duration = 180) {
   } catch (e) {}
 }
 
-// Black or white text, whichever reads better on a badge of this colour.
+// Black or white text for a badge colour.
 function textOn(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
   if (!m) return "#fff";
@@ -91,9 +89,7 @@ function textOn(hex) {
   return L > 0.34 ? "#1b1b1b" : "#fff";
 }
 
-// Arrows, square outlines and score badges as one SVG in the board's own pixel space.
-// Every part can be switched off or restyled from the panel.
-// A deeper shade of a colour for the second stop of the flowing gradient; the brand orange gets the crab's own outline red.
+// Darker shade for the gradient.
 function deepShade(hex) {
   if (/^#e4572e$/i.test(hex)) return "#a8341a";
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
@@ -105,6 +101,7 @@ function deepShade(hex) {
 const PROMOTION = { q: "= Queen", r: "= Rook", b: "= Bishop", n: "= Knight" };
 let flowCounter = 0;
 
+// Draws all hints as one SVG over the board.
 function drawMarks(board, marks, animate = false) {
   const anim = animate && settings.animate && !reducedMotion();
   clearMarks(anim);
@@ -113,9 +110,7 @@ function drawMarks(board, marks, animate = false) {
   if (getComputedStyle(board).position === "static") board.style.position = "relative";
   const br = board.getBoundingClientRect();
   const svg = svgEl("svg", { class: MARK, width: br.width, height: br.height, viewBox: `0 0 ${br.width} ${br.height}` });
-  // Flowing colours: a move is painted with a gradient that slowly drifts across the board, either from its colour to
-  // a deeper shade of it ("crab": the brand orange and the crab's outline red) or between the two colours of the
-  // panel, orange and cyan ("duo"). "off": plain colours; with reduced motion the gradient stands still.
+  // Flowing gradient for a colour.
   const defs = svgEl("defs", {});
   svg.appendChild(defs);
   const flowId = ++flowCounter;
@@ -125,7 +120,7 @@ function drawMarks(board, marks, animate = false) {
     if (!mode || mode === "off") return col;
     if (paints[col]) return paints[col];
     const id = `stockcrab-flow-${flowId}-${Object.keys(paints).length}`;
-    const span = (br.width / 8) * 1.1; // about one cell from one colour to the other
+    const span = (br.width / 8) * 1.1;
     const g = svgEl("linearGradient", { id, gradientUnits: "userSpaceOnUse", x1: 0, y1: 0, x2: span, y2: span, spreadMethod: "reflect" });
     g.appendChild(svgEl("stop", { offset: 0, "stop-color": col }));
     const other = mode === "duo" ? (col.toLowerCase() === String(settings.colourPremove).toLowerCase() ? settings.colourBest : settings.colourPremove) : deepShade(col);
@@ -138,13 +133,10 @@ function drawMarks(board, marks, animate = false) {
   };
   svg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:20;overflow:visible";
   const k = settings.lineWidth / 100;
-  const infos = []; // per move: the icon and the card to place on its target cell
-  const allParts = []; // every arrow's polygons: the card and the icon keep clear of them
+  const infos = [];
+  const allParts = [];
 
-  // Frosted glass: SVG cannot blur what is behind it, so thin HTML layers with `backdrop-filter` sit under the
-  // drawing, each one the exact shape of an outline ring, an arrow, a card or an icon. The pieces inside the cell stay
-  // sharp. The shapes are plain boxes (rounded or turned at most), never clip-path: Chromium ignores clip-path on a
-  // backdrop-filter as soon as an ancestor clips with rounded corners, which chess.com's board does.
+  // Blur layer: plain boxes under the drawing (Chromium ignores clip-path here).
   const blurPx = settings.blur;
   const blurLayer = blurPx > 0 ? document.createElement("div") : null;
   if (blurLayer) {
@@ -159,11 +151,9 @@ function drawMarks(board, marks, animate = false) {
       `backdrop-filter:blur(${blurPx}px);-webkit-backdrop-filter:blur(${blurPx}px);${extra}`;
     blurLayer.appendChild(d);
   };
-  // a bar of the given length and thickness that starts at (x, y) and runs in the direction (ux, uy)
   const blurBar = (x, y, ux, uy, len, thick, round) =>
     blurShape(x, y - thick / 2, len, thick, `transform-origin:0 50%;transform:rotate(${Math.atan2(uy, ux)}rad);` + (round ? `border-radius:${thick / 2}px;` : ""));
 
-  // Last in the list is drawn first, so the main move ends up on top.
   for (const m of marks.slice().reverse()) {
     const from = squareRect(board, m.move.slice(0, 2), br);
     const to = squareRect(board, m.move.slice(2, 4), br);
@@ -172,9 +162,7 @@ function drawMarks(board, marks, animate = false) {
     const sq = from.w;
     const alt = m.kind === "alt";
     const op = (alt ? 0.68 : 1) * (settings.opacity / 100);
-    // The outlines and the arrow of one move are ONE layer: the see-through is applied to the group as a whole,
-    // so where the shaft meets the head, the round start of the line, or the arrow crosses an outline, nothing
-    // gets darker (separately transparent pieces would show through each other).
+    // outlines and arrow of one move in one group
     const shape = svgEl("g", { opacity: op });
     svg.appendChild(shape);
 
@@ -187,7 +175,6 @@ function drawMarks(board, marks, animate = false) {
         });
         shape.appendChild(outline);
         if (anim) animateIn(outline, [{ opacity: 0 }, { opacity: 1 }], 0, 160);
-        // ring-shaped blur exactly as wide as the outline's own stroke: nothing outside the line is blurred
         const band = ow;
         blurShape(r.x, r.y, r.w, band);
         blurShape(r.x, r.y + r.h - band, r.w, band);
@@ -199,14 +186,14 @@ function drawMarks(board, marks, animate = false) {
     const fc = { x: from.x + from.w / 2, y: from.y + from.h / 2 };
     const tc = { x: to.x + to.w / 2, y: to.y + to.h / 2 };
     const len = Math.hypot(tc.x - fc.x, tc.y - fc.y);
-    const arrowParts = []; // the polygons of this arrow (shaft and head), for the blur and to keep the card clear of it
+    const arrowParts = [];
     if (len) {
       const ux = (tc.x - fc.x) / len;
       const uy = (tc.y - fc.y) / len;
       const lw = (alt ? sq * 0.05 : sq * 0.075) * k;
       const hl = settings.showHead ? Math.min(sq * 0.45, sq * (alt ? 0.22 : 0.27) * (0.6 + 0.4 * k)) : 0;
       const hw = hl * 0.6;
-      const bx = tc.x - ux * hl; // where the head starts
+      const bx = tc.x - ux * hl;
       const by = tc.y - uy * hl;
       const x2 = bx + ux * hl * 0.2;
       const y2 = by + uy * hl * 0.2;
@@ -216,7 +203,6 @@ function drawMarks(board, marks, animate = false) {
       });
       shape.appendChild(line);
       if (anim) {
-        // the line is drawn from the piece towards the target
         const L = Math.hypot(x2 - fc.x, y2 - fc.y);
         animateIn(line, [{ strokeDasharray: `${L}`, strokeDashoffset: L }, { strokeDasharray: `${L}`, strokeDashoffset: 0 }], 0, 200);
       }
@@ -227,19 +213,17 @@ function drawMarks(board, marks, animate = false) {
           fill: paint(col), stroke: paint(col), "stroke-width": sq * 0.025, "stroke-linejoin": "round",
         });
         shape.appendChild(headEl);
-        // the head appears just before the line reaches it, growing out of the tip
         if (anim) animateIn(headEl, [{ opacity: 0, transform: "scale(0.5)", transformOrigin: `${tip.x}px ${tip.y}px` }, { transform: "scale(1)", transformOrigin: `${tip.x}px ${tip.y}px` }], 120, 150);
       }
-      // exactly the shape of the drawing: a strip as wide as the line, a triangle as big as the head
+      // blur shapes
       const half = lw / 2;
-      const back = lw / 2; // the line has a round cap at its start
+      const back = lw / 2;
       const sx = fc.x - ux * back;
       const sy = fc.y - uy * back;
       const shaft = [[sx - uy * half, sy + ux * half], [sx + uy * half, sy - ux * half], [x2 + uy * half, y2 - ux * half], [x2 - uy * half, y2 + ux * half]];
       arrowParts.push(shaft);
       if (hl) arrowParts.push([[tc.x - ux * sq * 0.03, tc.y - uy * sq * 0.03], [bx - uy * hw, by + ux * hw], [bx + uy * hw, by - ux * hw]]);
       if (blurLayer) {
-        // the shaft is one turned bar with round ends; the head is a few bars along the axis, narrowing to the tip
         blurBar(sx, sy, ux, uy, Math.hypot(x2 - sx, y2 - sy), lw, true);
         if (hl) {
           const tipX = tc.x - ux * sq * 0.03;
@@ -253,11 +237,8 @@ function drawMarks(board, marks, animate = false) {
       }
     }
 
-    // What goes on the target cell next to the arrow: one compact card (the score on top, below it "premove" and the
-    // cell's name if switched on). It is placed in the last pass, once its size is known, in a corner of the cell the
-    // arrow does not touch.
+    // card on the target cell
     const score = settings.showLabels && m.label ? m.label : "";
-    // the piece a pawn promotes to is always written on the card ("= Queen", "= Knight" ...)
     const words = [PROMOTION[m.move[4]], settings.showSquare && m.move.slice(2, 4), m.kind === "premove" && "premove"].filter(Boolean).join(" · ");
     const info = { to, sq, op, card: null };
     if (score || words) {
@@ -269,7 +250,6 @@ function drawMarks(board, marks, animate = false) {
         t.textContent = str;
         return t;
       };
-      // the card flows too when its text is white (on a light colour such as the premove cyan it stays plain, for contrast)
       const card = svgEl("rect", { fill: textOn(col) === "#fff" && settings.flowColours !== "duo" ? paint(col) : col, opacity: Math.min(1, op + 0.05) });
       const t1 = score ? text(score, sq * (alt ? 0.125 : 0.14), 700) : null;
       const t2 = words ? text(words, sq * 0.09, 500, "opacity:.92") : null;
@@ -282,15 +262,12 @@ function drawMarks(board, marks, animate = false) {
     allParts.push(...arrowParts);
   }
   if (blurLayer) {
-    board.appendChild(blurLayer); // under the drawing (z-index 19 < 20); the cards below add their shapes to it
+    board.appendChild(blurLayer);
     if (anim) animateIn(blurLayer, [{ opacity: 0 }, { opacity: 1 }], 0, 160);
   }
   board.appendChild(svg);
 
-  // Place the icon and the card of every move. The card is sized to its text (measured once it is in the page,
-  // estimated if that is impossible); if it is too wide for its row, both lines shrink together. They normally sit in
-  // the top corners (card left, icon right); if an arrow runs through that spot they move to another corner of the
-  // cell, the first arrangement that no arrow touches (otherwise the one touched least).
+  // Places the cards clear of the arrows.
   const polyHitsRect = (poly, r) => {
     const inside = (p) => p[0] >= r.x && p[0] <= r.x + r.w && p[1] >= r.y && p[1] <= r.y + r.h;
     if (poly.some(inside)) return true;
@@ -312,14 +289,13 @@ function drawMarks(board, marks, animate = false) {
     }
     return false;
   };
-  const GAPS = [0.05, 0.04, 0.03, 0.02, 0.01, 0]; // gaps to try, in cells: the card and the icon keep as much air from an arrow as possible
+  const GAPS = [0.05, 0.04, 0.03, 0.02, 0.01, 0]; // gaps to try, in cells
   const OPTIONS = [["TL", "TR"], ["BL", "BR"], ["TL", "BR"], ["BL", "TR"], ["TR", "TL"], ["BR", "BL"], ["TR", "BL"], ["BR", "TL"], ["TR", "BR"], ["BR", "TR"], ["TL", "BL"], ["BL", "TL"]];
   for (const c of infos) {
     const { to, sq } = c;
-    const margin = sq * 0.1; // the card never touches the cell's walls
+    const margin = sq * 0.1;
     const r = sq * 0.14;
     const im = sq * 0.08;
-    // the card at full size
     let k = null;
     if (c.card) {
       const width = (t, fs) => {
@@ -338,10 +314,9 @@ function drawMarks(board, marks, animate = false) {
     const layouts = [];
     const corners = [["TL", ""], ["BL", ""], ["BR", ""], ["TR", ""]];
     for (const [cc, ic, shrink = 1] of k ? corners.concat(corners.map(([a, b]) => [a, b, 0.8])) : corners) {
-      let f = shrink; // a smaller card is the last resort when the arrow leaves little room
+      let f = shrink;
       let total = k ? k.total * f : 0;
       if (k) {
-        // in the row of the icon the card ends a little before it, otherwise it may use the cell's width
         const sameRow = ic && cc[0] === ic[0];
         const maxW = sameRow ? to.w - im - r * 2 - sq * 0.04 - margin : to.w - margin * 2;
         if (total > maxW) {
@@ -352,9 +327,8 @@ function drawMarks(board, marks, animate = false) {
       const h = k ? k.padY * 2 * f + (c.card.t1 ? c.card.fs1 * f : 0) + (c.card.t2 ? c.card.fs2 * f : 0) + k.gap * f : 0;
       const cardRect = k ? { x: cc[1] === "L" ? to.x + margin : to.x + to.w - margin - total, y: cc[0] === "T" ? to.y + margin : to.y + to.h - margin - h, w: total, h } : null;
       const iconRect = ic ? { x: ic[1] === "L" ? to.x + im : to.x + to.w - im - r * 2, y: ic[0] === "T" ? to.y + im : to.y + to.h - im - r * 2, w: r * 2, h: r * 2 } : null;
-      // how much air is there between the arrows and the card / the icon: the first (largest) gap that no arrow breaks
       const grow = (q, g) => ({ x: q.x - g, y: q.y - g, w: q.w + g * 2, h: q.h + g * 2 });
-      let level = 0; // 0 = the full gap is free, GAPS.length = an arrow runs right through
+      let level = 0;
       for (const q of [cardRect, iconRect]) {
         if (!q) continue;
         let i = 0;
@@ -381,7 +355,7 @@ function drawMarks(board, marks, animate = false) {
       card.setAttribute("width", q.w);
       card.setAttribute("height", q.h);
       card.setAttribute("rx", sq * 0.05);
-      blurShape(q.x, q.y, q.w, q.h, `border-radius:${sq * 0.05}px`); // exactly under the card
+      blurShape(q.x, q.y, q.w, q.h, `border-radius:${sq * 0.05}px`);
       let cy = q.y + padY;
       if (t1) {
         t1.setAttribute("x", q.x + padX);

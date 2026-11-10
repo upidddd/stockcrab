@@ -1,13 +1,11 @@
-//! StockCrab · Search runner
-//! Sends a search to the engine (strength, hash, position, go) and answers when it ends.
-//! File: background/engine/search.js. A background script (hosts the engine); files of one kind share a single global scope and load in the order of manifest.json.
+// Runs one search.
 
 let lastFen = null;
 function pieces(fen) {
   return (fen.split(" ")[0].match(/[a-z]/gi) || []).length;
 }
 const START_PLACEMENT = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-// A new game starts at the initial setup or when material jumps up; otherwise keep the hash.
+// Same game: keep the hash.
 function sameGame(fen) {
   if (lastFen === null || fen.split(" ")[0] === START_PLACEMENT) return false;
   return pieces(fen) <= pieces(lastFen);
@@ -25,11 +23,9 @@ function start(req) {
     send("setoption name UCI_LimitStrength value false");
     if (model.noElo) send("setoption name Skill Level value 20");
   } else if (model.noElo) {
-    // no UCI_Elo in this build: map the Elo range onto Skill Level 0..20
     send(`setoption name Skill Level value ${Math.max(0, Math.min(20, Math.round(((req.elo - 1320) / (3190 - 1320)) * 20)))}`);
   } else {
     send("setoption name UCI_LimitStrength value true");
-    // an Elo outside the engine's own range would be ignored, so bring it inside
     const [lo, hi] = model.elo || [0, Infinity];
     send(`setoption name UCI_Elo value ${Math.max(lo, Math.min(hi, req.elo))}`);
   }
@@ -78,7 +74,6 @@ function onEngineMessage(event) {
     } catch (e) {
       console.error("[sparring] aggression pick failed", e);
     }
-    // The evaluation shown for the move must belong to that very move: the line it is in, or its own deepest record.
     const chosen = lines.find((l) => l.move === move) || deepestFor(done, move);
     done.resolve({
       id: done.id, move, depth, chosen: chosen ? { move: chosen.move, score: chosen.score, mate: chosen.mate, depth: chosen.depth, pv: chosen.pv } : null,

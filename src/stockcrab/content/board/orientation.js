@@ -1,10 +1,6 @@
-//! StockCrab · Orientation
-//! Which colour is at the bottom of the board, and which colour the user plays.
-//! File: content/board/orientation.js. A content script (runs on chess.com and lichess pages); files of one kind share a single global scope and load in the order of manifest.json.
+// Board orientation and which colour the user plays.
 
-// Which colour is at the bottom of the board? The site's own orientation flag decides. The pieces' heights are
-// only a cross-check, and only while many pieces are on the board: in an endgame the average height of a side's
-// few pieces says very little (it can even point the wrong way), which used to flip "who is who".
+// Colour at the bottom: the site's flag, cross-checked by piece positions.
 function chooseBottom(flag, items) {
   const white = items.filter((i) => i.white);
   const black = items.filter((i) => !i.white);
@@ -16,7 +12,7 @@ function chooseBottom(flag, items) {
   return flag;
 }
 
-// The colour the user plays: the manual choice, else chess.com's own "playing as", else the colour at the bottom.
+// The colour the user plays.
 function myColour(board) {
   if (settings.side === "w" || settings.side === "b") return settings.side;
   try {

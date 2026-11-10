@@ -1,8 +1,6 @@
-//! StockCrab · Mark builder
-//! Turns the engine's answer into the marks to draw: the best move, the others, the premove.
-//! File: content/hints/marks.js. A content script (runs on chess.com and lichess pages); files of one kind share a single global scope and load in the order of manifest.json.
+// Turns an engine answer into the marks to draw.
 
-// Piece on a square of a FEN ("P", "n", ...), or null.
+// Piece on a square of a FEN, or null.
 function fenPiece(fen, sq) {
   const row = fen.split(" ")[0].split("/")[8 - Number(sq[1])];
   if (!row) return null;
@@ -20,8 +18,7 @@ function fenPiece(fen, sq) {
   return null;
 }
 
-// "Nf3", "exd5", "O-O", "e8=Q": readable move names. (No disambiguation or check marks.)
-// `recapture` marks a premove that lands where the opponent's piece will be.
+// Short move names: Nf3, exd5, O-O, e8=Q.
 function sanish(fen, move, recapture) {
   const from = move.slice(0, 2);
   const to = move.slice(2, 4);
@@ -38,12 +35,11 @@ function sanish(fen, move, recapture) {
   return out;
 }
 
-// Our turn: the chosen move, then up to `others` more moves that are nearly as good.
+// Marks for our turn.
 function marksForMyTurn(res, others, fen) {
   const lines = res.lines || [];
   const best = lines[0];
-  // The score shown must belong to the move shown: its own line, or its own deepest record. If the engine never
-  // evaluated it, no score is shown (the best line's score would be someone else's).
+  // each move with its own score
   const chosen = lines.find((l) => l.move === res.move) || res.chosen || null;
   const make = (move, kind, line) => ({
     move, kind, label: line ? scoreText(line, 1) : "", san: sanish(fen, move),
@@ -58,9 +54,7 @@ function marksForMyTurn(res, others, fen) {
   return marks;
 }
 
-// Opponent's turn. "likely": our best reply to their most likely move, with how many of their other likely
-// moves lead to the same reply. "safe": the same reply after every legal move; the score is the weakest one.
-// "pawn": the pawn retake after a pawn trade.
+// Marks for the opponent's turn (premove).
 function marksForPremove(res, fen) {
   if (!res.premove) return [];
   const t = scoreText({ score: res.score, mate: res.mate }, 1);

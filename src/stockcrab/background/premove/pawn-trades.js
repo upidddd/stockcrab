@@ -1,9 +1,5 @@
-//! StockCrab · Pawn-trade rule
-//! The rule-based pawn retake: they take a pawn with a pawn, another pawn takes back.
-//! File: background/premove/pawn-trades.js. A background script (hosts the engine); files of one kind share a single global scope and load in the order of manifest.json.
+// Pawn-trade premove rule.
 
-// ---- pawn trades ----
-// "They take my pawn with a pawn, and another pawn of mine can take back": premove the retake, by rule.
 const FILES_ = "abcdefgh";
 
 function boardMap(fen) {
@@ -21,13 +17,13 @@ function boardMap(fen) {
   return map;
 }
 
-// Every legal "their pawn takes our pawn" with the list of our pawn retakes on that square.
+// Their pawn-takes-pawn captures and our pawn retakes.
 function pawnTrades(fen, legal) {
   const map = boardMap(fen);
-  const weAreWhite = fen.split(" ")[1] === "b"; // the opponent is the side to move
+  const weAreWhite = fen.split(" ")[1] === "b";
   const theirPawn = weAreWhite ? "p" : "P";
   const ourPawn = weAreWhite ? "P" : "p";
-  const theirDir = weAreWhite ? -1 : 1; // their pawns capture towards lower ranks if they are black
+  const theirDir = weAreWhite ? -1 : 1;
   const ourDir = -theirDir;
   const out = [];
   for (const [sq, piece] of Object.entries(map)) {
@@ -41,7 +37,7 @@ function pawnTrades(fen, legal) {
       const target = FILES_[tf] + tr;
       if (map[target] !== ourPawn) continue;
       const capture = sq + target;
-      if (!legal.has(capture)) continue; // pinned pawn, check, ...: they cannot play it
+      if (!legal.has(capture)) continue;
       const defenders = [];
       for (const [s2, p2] of Object.entries(map)) {
         if (p2 !== ourPawn) continue;
@@ -58,7 +54,6 @@ async function pawnTradePremove(msg, mine, ctx) {
   const legal = new Set(ctx.all.lines.map((l) => l.move));
   const trades = pawnTrades(msg.fen, legal);
   if (!trades.length) return null;
-  // the capture they are most likely to play first
   const rank = new Map(ctx.all.lines.map((l, i) => [l.move, i]));
   trades.sort((a, b) => rank.get(a.capture) - rank.get(b.capture));
   const base = { id: msg.id, fen: msg.fen, elo: 3190, aggression: 0, hash: msg.hash };
@@ -66,13 +61,12 @@ async function pawnTradePremove(msg, mine, ctx) {
   const tolerance = msg.tradeTolerance ?? 100;
   for (const t of trades.slice(0, 3)) {
     if (mine.cancelled) return null;
-    // our best reply to that capture, and our best pawn retake; the retake must not be much worse
     const any = await submit({ ...base, moves: [t.capture], multipv: 1, movetime: per, goCmd: `go movetime ${per}` });
     if (mine.cancelled || any.error || !any.lines || !any.lines[0]) continue;
     const rec = await submit({ ...base, moves: [t.capture], multipv: 1, movetime: per, goCmd: `go movetime ${per} searchmoves ${t.defenders.join(" ")}` });
     if (mine.cancelled || rec.error || !rec.lines || !rec.lines[0]) continue;
     const retake = rec.lines[0];
-    if (!t.defenders.includes(retake.move)) continue; // none of them is legal after the capture (pinned, ...)
+    if (!t.defenders.includes(retake.move)) continue;
     if (any.lines[0].score - retake.score > tolerance) continue;
     return { id: msg.id, mode: "pawn", premove: retake.move, expect: t.capture, score: retake.score, mate: retake.mate, tested: 2 };
   }

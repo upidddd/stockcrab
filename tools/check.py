@@ -7,11 +7,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 EXT = os.path.join(ROOT, "src", "stockcrab")
 problems = []
 
-
 def need(path, why):
     if not os.path.exists(os.path.join(EXT, path)):
         problems.append(f"missing {path} ({why})")
-
 
 manifest = json.load(open(os.path.join(EXT, "manifest.json"), encoding="utf-8"))
 listed = []
@@ -29,7 +27,7 @@ for res in manifest.get("web_accessible_resources", []):
         folder = pattern.split("*")[0].rstrip("/")
         need(folder, "web accessible folder")
 
-# a script that nobody loads is a forgotten script (it once broke a build of another project)
+# every script is in the manifest
 for folder in ("background", "content", "data"):
     for dirpath, _, files in os.walk(os.path.join(EXT, folder)):
         for f in files:
@@ -39,12 +37,12 @@ for folder in ("background", "content", "data"):
 if len(listed) != len(set(listed)):
     problems.append("a script is listed twice in manifest.json")
 
-# the engine registry points to files
+# engine files exist
 models = open(os.path.join(EXT, "background", "engine", "models.js"), encoding="utf-8").read()
 for path in re.findall(r'file: "([^"]+)"', models):
     need(path, "engine build named in background/engine/models.js")
 
-# the JavaScript parses (engine builds are third-party, they are not checked)
+# JavaScript parses
 node = shutil.which("node")
 if node:
     for path in listed:

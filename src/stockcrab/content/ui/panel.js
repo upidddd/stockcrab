@@ -1,6 +1,4 @@
-//! StockCrab · Panel
-//! The settings panel (shadow DOM): controls, styles, mounting, the on/off switch, the engine info.
-//! File: content/ui/panel.js. A content script (runs on chess.com and lichess pages); files of one kind share a single global scope and load in the order of manifest.json.
+// Settings panel.
 
 const MODEL_OPTIONS = [
   ["sf19-full", "Stockfish 19 · Full"],
@@ -181,7 +179,7 @@ function mountPanel() {
     </div>`;
   document.body.appendChild(host);
 
-  // Clicking the status line copies what was read from the page, to show it when a position looks wrong.
+  // click copies what was read from the page
   const statusEl = shadow.querySelector(".status");
   statusEl.title = "Click: copy the position that was read";
   statusEl.addEventListener("click", async () => {

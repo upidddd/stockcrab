@@ -1,6 +1,4 @@
-//! StockCrab · Premove runner
-//! Runs the premove analysis and the pawn-trade rule for one request.
-//! File: background/premove/run.js. A background script (hosts the engine); files of one kind share a single global scope and load in the order of manifest.json.
+// Premove request handler.
 
 async function runPremove(msg) {
   if (job) job.cancelled = true;

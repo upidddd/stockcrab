@@ -1,7 +1,4 @@
-/*
-  StockCrab single-threaded WebAssembly port of Fairy-Stockfish (GPL-3.0, like the engine).
-  The JavaScript side (stockcrab_pre.js) keeps the queue of posted lines.
-*/
+// StockCrab: single-threaded Fairy-Stockfish for the browser (GPL-3.0).
 
 #ifdef SC_SINGLE_THREAD
 
@@ -42,9 +39,9 @@ void sc_yield(bool force) {
   emscripten_sleep(0);
   for (int r; (r = sc_poll()); )
       if (r == 1)
-          Threads.stop = true; // "stop" or "quit"
+          Threads.stop = true;
       else if (r == 2 && Threads.size())
-          Threads.main()->ponder = false; // "ponderhit"
+          Threads.main()->ponder = false;
 }
 
 } // namespace Stockfish

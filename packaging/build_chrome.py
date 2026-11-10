@@ -23,7 +23,7 @@ os.makedirs(os.path.join(OUT, "chrome"), exist_ok=True)
 for f in ("browser-shim.js", "offscreen-shim.js", "service-worker.js", "page-fen.js"):
     shutil.copy(os.path.join(PLATFORM, f), os.path.join(OUT, "chrome", f))
 
-# the engine host: the Firefox background scripts, in the same order, behind the shim
+# engine host page
 tags = "\n".join(f'<script src="../{p}"></script>' for p in ["chrome/offscreen-shim.js"] + ff["background"]["scripts"])
 open(os.path.join(OUT, "chrome", "offscreen.html"), "w", encoding="utf-8").write(
     f'<!doctype html>\n<meta charset="utf-8">\n<title>StockCrab engine</title>\n{tags}\n')
@@ -52,7 +52,7 @@ if ff.get("web_accessible_resources"):
 manifest = {k: v for k, v in manifest.items() if v is not None}
 json.dump(manifest, open(os.path.join(OUT, "manifest.json"), "w", encoding="utf-8"), indent=2)
 
-# every file the manifest and the offscreen document name must be there
+# every named file exists
 missing = [p for p in manifest["content_scripts"][0]["js"] + manifest["content_scripts"][1]["js"] + ["chrome/service-worker.js"] + ff["background"]["scripts"]
            if not os.path.exists(os.path.join(OUT, p))]
 if missing:

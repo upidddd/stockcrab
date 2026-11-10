@@ -22,7 +22,7 @@ src/stockcrab/
 
 ## Components
 
-Names used in the README, in the code headers (the `//!` lines at the top of every file) and here.
+Names used in the README, in the code headers (the one-line comment at the top of every file) and here.
 
 ### Content scripts, in load order
 
@@ -74,7 +74,7 @@ Messages from the content scripts to the background: `status`, `engine` (switch 
 
 ## Adding or moving a file
 
-1. Put the script in the right folder and give it a `//!` header (name, one line, its path).
+1. Put the script in the right folder and give it a one-line comment at the top saying what it is for.
 2. Add it to `manifest.json` (`content_scripts[0].js` or `background.scripts`) at the right place in the load order.
 3. Run `python3 tools/check.py`. It fails if a script is missing from the manifest or the manifest names a file that is not there.
 

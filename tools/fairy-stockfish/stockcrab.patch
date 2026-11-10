@@ -1,5 +1,5 @@
 diff --git a/src/search.cpp b/src/search.cpp
-index bcb44c0..efe8d3f 100644
+index bcb44c0..0dfbccb 100644
 --- a/src/search.cpp
 +++ b/src/search.cpp
 @@ -25,6 +25,7 @@
@@ -15,7 +15,7 @@ index bcb44c0..efe8d3f 100644
  
    while (!Threads.stop && (ponder || Limits.infinite))
 +#ifdef SC_SINGLE_THREAD
-+      sc_yield(true); // wait for "stop" or "ponderhit" without blocking the worker
++      sc_yield(true);
 +#else
    {} // Busy wait for a stop or a ponder reset
 +#endif
@@ -27,14 +27,14 @@ index bcb44c0..efe8d3f 100644
    static TimePoint lastInfoTime = now();
  
 +#ifdef SC_SINGLE_THREAD
-+  sc_yield(); // read "stop" and the like
++  sc_yield();
 +#endif
 +
    TimePoint elapsed = Time.elapsed();
    TimePoint tick = Limits.startTime + elapsed;
  
 diff --git a/src/thread.cpp b/src/thread.cpp
-index 32aaf58..05e3694 100644
+index 32aaf58..29006bb 100644
 --- a/src/thread.cpp
 +++ b/src/thread.cpp
 @@ -27,6 +27,7 @@
@@ -45,12 +45,11 @@ index 32aaf58..05e3694 100644
  
  namespace Stockfish {
  
-@@ -36,10 +37,18 @@ ThreadPool Threads; // Global object
+@@ -36,10 +37,17 @@ ThreadPool Threads; // Global object
  /// Thread constructor launches the thread and waits until it goes to sleep
  /// in idle_loop(). Note that 'searching' and 'exit' should be already set.
  
 +#ifdef SC_SINGLE_THREAD
-+// Single-threaded: no thread to start, the search runs inside start_searching().
 +Thread::Thread(size_t n) : idx(n) {
 +
 +  searching = false;
@@ -64,7 +63,7 @@ index 32aaf58..05e3694 100644
  
  
  /// Thread destructor wakes up the thread in idle_loop() and waits
-@@ -50,8 +59,10 @@ Thread::~Thread() {
+@@ -50,8 +58,10 @@ Thread::~Thread() {
    assert(!searching);
  
    exit = true;
@@ -75,7 +74,7 @@ index 32aaf58..05e3694 100644
  }
  
  
-@@ -80,9 +91,17 @@ void Thread::clear() {
+@@ -80,9 +90,17 @@ void Thread::clear() {
  
  void Thread::start_searching() {
  
@@ -83,7 +82,7 @@ index 32aaf58..05e3694 100644
 +  if (exit)
 +      return;
 +  searching = true;
-+  search(); // runs to the end here; it yields to the worker's event loop to read "stop"
++  search();
 +  searching = false;
 +#else
    std::lock_guard<std::mutex> lk(mutex);
@@ -93,7 +92,7 @@ index 32aaf58..05e3694 100644
  }
  
  
-@@ -91,8 +110,10 @@ void Thread::start_searching() {
+@@ -91,8 +109,10 @@ void Thread::start_searching() {
  
  void Thread::wait_for_search_finished() {
  
@@ -104,12 +103,12 @@ index 32aaf58..05e3694 100644
  }
  
  
-@@ -137,6 +158,10 @@ void Thread::idle_loop() {
+@@ -137,6 +157,10 @@ void Thread::idle_loop() {
  
  void ThreadPool::set(size_t requested) {
  
 +#ifdef SC_SINGLE_THREAD
-+  requested = std::min(requested, size_t(1)); // one thread is all there is
++  requested = std::min(requested, size_t(1));
 +#endif
 +
    if (size() > 0)   // destroy any existing thread(s)
@@ -146,7 +145,7 @@ index 5982d93..3538450 100644
  
    for (size_t idx = 0; idx < Options["Threads"]; ++idx)
 diff --git a/src/uci.cpp b/src/uci.cpp
-index 584977a..dbe4b8c 100644
+index 584977a..3f9f879 100644
 --- a/src/uci.cpp
 +++ b/src/uci.cpp
 @@ -33,6 +33,7 @@
@@ -163,7 +162,7 @@ index 584977a..dbe4b8c 100644
    do {
 +#ifdef SC_SINGLE_THREAD
 +      if (argc == 1)
-+          cmd = sc_getline(); // waits for a line posted to the worker // waits for a line posted to the worker
++          cmd = sc_getline();
 +#else
        if (argc == 1 && !getline(cin, cmd)) // Block here waiting for input or EOF
            cmd = "quit";
@@ -172,7 +171,7 @@ index 584977a..dbe4b8c 100644
        istringstream is(cmd);
  
 diff --git a/src/ucioption.cpp b/src/ucioption.cpp
-index 3e34cbd..1b42146 100644
+index 3e34cbd..af7e549 100644
 --- a/src/ucioption.cpp
 +++ b/src/ucioption.cpp
 @@ -204,7 +204,7 @@ void init(OptionsMap& o) {
@@ -180,7 +179,7 @@ index 3e34cbd..1b42146 100644
    o["SyzygyProbeLimit"]      << Option(7, 0, 7);
    o["Use NNUE"]              << Option(true, on_use_NNUE);
 -#ifndef NNUE_EMBEDDING_OFF
-+#if !defined(NNUE_EMBEDDING_OFF) || defined(SC_SINGLE_THREAD) // StockCrab ships the net next to the engine
++#if !defined(NNUE_EMBEDDING_OFF) || defined(SC_SINGLE_THREAD)
    o["EvalFile"]              << Option(EvalFileDefaultName, on_eval_file);
  #else
    o["EvalFile"]              << Option("<empty>", on_eval_file);

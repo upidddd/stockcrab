@@ -1,25 +1,23 @@
-//! StockCrab · Entry point
-//! Loads the saved settings (with migration), the Alt+X hotkey, the periodic jobs: the start of everything.
-//! File: content/core/main.js. A content script (runs on chess.com and lichess pages); files of one kind share a single global scope and load in the order of manifest.json.
+// Entry point: loads the saved settings, the Alt+X hotkey, starts the timers.
 
-// Load the saved settings. This is the last file to load, so everything the callback uses (the panel, the controls) exists by now.
+// saved settings, with migration of old values
 try {
   browser.storage.local.get("stockcrab").then((r) => {
     if (r.stockcrab) {
       const saved = { ...r.stockcrab };
-      if (saved.engine && !saved.model) saved.model = saved.engine === "lite" ? "sf19-lite" : "sf19-full"; // pre-model saves
+      if (saved.engine && !saved.model) saved.model = saved.engine === "lite" ? "sf19-lite" : "sf19-full"; // old saves
       delete saved.engine;
-      if (saved.colourBest === "#1f9d3a") delete saved.colourBest; // old default green
-      if (saved.colourAlt === "#2f6fdd") delete saved.colourAlt; // old default blue
-      if ((saved.version || 1) < 3 && saved.opacity === 90) delete saved.opacity; // the old default; hints are now more transparent
-      if ((saved.version || 1) < 2) delete saved.showSquare; // the card used to show the cell name by default; it is now off
-      if (saved.colourPremove === "#d62828") delete saved.colourPremove; // old default red
+      if (saved.colourBest === "#1f9d3a") delete saved.colourBest;
+      if (saved.colourAlt === "#2f6fdd") delete saved.colourAlt;
+      if ((saved.version || 1) < 3 && saved.opacity === 90) delete saved.opacity;
+      if ((saved.version || 1) < 2) delete saved.showSquare;
+      if (saved.colourPremove === "#d62828") delete saved.colourPremove;
       Object.assign(settings, saved, { enabled: false });
-      settings.version = DEFAULTS.version; // migrated: the next load must not redo the resets above
+      settings.version = DEFAULTS.version;
       settings.sections = { ...DEFAULTS.sections, ...(r.stockcrab.sections || {}) };
       try {
         for (const c of CONTROLS) {
-          // a saved value of the wrong type or outside the slider's range must not break the panel or the engine request
+          // keep saved values inside the slider ranges
           if (c.type === "range" && !(Number.isFinite(settings[c.key]) && settings[c.key] >= c.min && settings[c.key] <= c.max)) {
             settings[c.key] = Math.min(c.max, Math.max(c.min, Number.isFinite(Number(settings[c.key])) ? Number(settings[c.key]) : DEFAULTS[c.key]));
           }
@@ -50,7 +48,7 @@ async function refreshEngineInfo() {
     const state = !st ? "no reply" : st.engineError ? "error" : st.ready ? "ready" : "starting…";
     el.textContent = st ? `${st.modelName || "Engine"} · ${state}` : "Engine: no reply";
     el.title = st?.notice || "";
-    if (st?.notice) el.textContent = st.notice; // e.g. "Stockfish 17.1 Full did not start, using Stockfish 19 Full"
+    if (st?.notice) el.textContent = st.notice;
   } catch (e) {
     el.textContent = "Engine: no reply";
   }

@@ -1,7 +1,4 @@
-//! StockCrab · Chrome service worker
-//! A Chrome service worker cannot start a Web Worker, so the engine and everything in background/ runs in an
-//! offscreen document. This worker only makes sure that document exists; it never answers messages itself.
-//! File: platforms/chrome/service-worker.js (the Chrome build's background).
+// Chrome: keeps the offscreen engine document open.
 
 const OFFSCREEN = "chrome/offscreen.html";
 let creating = null;
@@ -18,7 +15,6 @@ async function ensureEngineHost() {
     }
     await creating;
   } catch (e) {
-    // "Only a single offscreen document may be created": another call won the race, which is fine
   } finally {
     creating = null;
   }
@@ -26,8 +22,7 @@ async function ensureEngineHost() {
 
 chrome.runtime.onInstalled.addListener(ensureEngineHost);
 chrome.runtime.onStartup.addListener(ensureEngineHost);
-// A message or a port from a page wakes this worker: make sure the engine host is there. The host answers;
-// returning false here tells Chrome this listener will not.
+// Makes sure the engine host exists.
 chrome.runtime.onMessage.addListener(() => {
   ensureEngineHost();
   return false;

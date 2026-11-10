@@ -1,6 +1,4 @@
-//! StockCrab · Engine boot and recovery
-//! Starts the engine worker, falls back to another build, restarts it after a crash.
-//! File: background/engine/boot.js. A background script (hosts the engine); files of one kind share a single global scope and load in the order of manifest.json.
+// Starts the engine worker, fallback and restart.
 
 let engineError = null;
 let lastLine = "";
@@ -26,10 +24,10 @@ function spawn() {
   engine.onerror = (e) => {
     console.error("[sparring] engine error", e.message, e.filename, e.lineno);
     engineError = e.message || "engine failed to load";
-    if (ready) return restartEngine(); // it was running and died: start the same model again
+    if (ready) return restartEngine();
     fallback();
   };
-  // The worker may drop commands sent while the wasm is still loading, so keep asking.
+  // keep asking until the engine answers
   hello = setInterval(() => send("uci"), 500);
   bootTimer = setTimeout(() => {
     if (!ready) fallback();
@@ -37,8 +35,7 @@ function spawn() {
   send("uci");
 }
 
-// The engine crashed while running: answer what is waiting, start the same model again (at most 3 times a minute,
-// so a model that cannot run does not restart in a loop).
+// Restarts a crashed engine (at most 3 times a minute).
 let crashes = [];
 let dead = false;
 function restartEngine() {
@@ -56,7 +53,7 @@ function restartEngine() {
   newGame = true;
   lastFen = null;
   if (crashes.length <= 3) spawn();
-  else dead = true; // given up for now: the next request tries once more
+  else dead = true;
 }
 
 function fallback() {

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Builds the single-threaded Fairy-Stockfish worker for StockCrab: fairy-stockfish.{js,wasm,data}.
 set -e
-HERE="${HERE:-$(pwd)}"   # the folder with emsdk/ and fsf/
+HERE="${HERE:-$(pwd)}"
 source "$HERE/emsdk/emsdk_env.sh" >/dev/null 2>&1
 cd "$HERE/fsf/src"
 OUT="$HERE/out"; mkdir -p "$OUT" obj

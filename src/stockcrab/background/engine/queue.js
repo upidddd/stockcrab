@@ -1,8 +1,6 @@
-//! StockCrab · Search queue
-//! One search at a time: a newer request replaces the one waiting.
-//! File: background/engine/queue.js. A background script (hosts the engine); files of one kind share a single global scope and load in the order of manifest.json.
+// Search queue: one search at a time.
 
-// Queue one search. Resolves with the engine's answer, or {move: null} if a newer search replaced it.
+// Queues a search; a newer one replaces the waiting one.
 function submit(msg) {
   if (dead) {
     dead = false;
@@ -14,7 +12,7 @@ function submit(msg) {
       id: msg.id, fen: msg.fen, elo: msg.elo, movetime: msg.movetime, aggression: msg.aggression,
       multipv: msg.multipv, moves: msg.moves, goCmd: msg.goCmd, hash: msg.hash, depth: msg.depth,
     };
-    // Never leave the caller hanging: answer with an error if the engine stays silent.
+    // timeout
     const timer = setTimeout(() => {
       if (busy === req) busy = null;
       if (pending === req) pending = null;

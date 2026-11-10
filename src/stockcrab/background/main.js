@@ -1,10 +1,8 @@
-//! StockCrab · Message router
-//! Switches engines, answers the content script's messages, keeps the page alive.
-//! File: background/main.js. A background script (hosts the engine); files of one kind share a single global scope and load in the order of manifest.json.
+// Message router and engine switching.
 
-// Switch between the full and the compact network on request (the panel's "Model" setting).
+// Switches the engine model.
 function setEngine(which) {
-  const id = MODELS[which] ? which : which === "lite" ? "sf19-lite" : DEFAULT_MODEL; // "lite"/"full": old saved settings
+  const id = MODELS[which] ? which : which === "lite" ? "sf19-lite" : DEFAULT_MODEL;
   if (engine && id === requested && id === modelId) return;
   if (job) job.cancelled = true;
   for (const r of [busy, pending]) if (r) r.resolve({ id: r.id, move: null });
@@ -33,13 +31,12 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     });
   }
   if (msg.type === "hint") {
-    if (job) job.cancelled = true; // a real position request always wins over a premove check
+    if (job) job.cancelled = true;
     return submit(msg);
   }
   if (msg.type === "premove") return runPremove(msg);
 });
 
-// Firefox suspends idle MV3 background pages and the worker would die with it.
-// An open port from the content script and a periodic API call keep it alive.
+// Keeps the background page alive.
 browser.runtime.onConnect.addListener(() => {});
 setInterval(() => browser.runtime.getPlatformInfo(), 15000);

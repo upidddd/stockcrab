@@ -1,12 +1,9 @@
-//! StockCrab · Chrome shim (engine host)
-//! The background scripts run in an offscreen document on Chrome. This gives them the `browser.runtime` they expect:
-//! Chrome's onMessage cannot answer with a returned promise, so the answer is passed to sendResponse instead.
-//! File: platforms/chrome/offscreen-shim.js, loaded first in chrome/offscreen.html.
+// Chrome: `browser.runtime` for the background scripts in the offscreen document.
 
 globalThis.browser = {
   runtime: {
     getURL: (path) => chrome.runtime.getURL(path),
-    getPlatformInfo: () => Promise.resolve({}), // only used as a keep-alive in Firefox; an offscreen document stays alive
+    getPlatformInfo: () => Promise.resolve({}),
     onConnect: chrome.runtime.onConnect,
     onMessage: {
       addListener(listener) {
@@ -20,7 +17,7 @@ globalThis.browser = {
           }
           if (result && typeof result.then === "function") {
             result.then(sendResponse, (e) => sendResponse({ id: msg && msg.id, move: null, error: String(e) }));
-            return true; // the answer comes later
+            return true;
           }
           if (result !== undefined) sendResponse(result);
           return false;

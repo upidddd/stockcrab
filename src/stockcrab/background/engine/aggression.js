@@ -1,6 +1,4 @@
-//! StockCrab · Aggression picker
-//! Picks a sharper move among nearly equal ones when the user asks for aggression.
-//! File: background/engine/aggression.js. A background script (hosts the engine); files of one kind share a single global scope and load in the order of manifest.json.
+// Picks a sharper move among nearly equal ones.
 
 const VALUE = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 
@@ -20,7 +18,7 @@ function pieceAt(fen, sq) {
   return null;
 }
 
-// How sharp a move is: captures (more for bigger victims), promotions, pawn advances.
+// How sharp a move is.
 function sharpness(fen, move) {
   const mover = pieceAt(fen, move.slice(0, 2));
   const victim = pieceAt(fen, move.slice(2, 4));
@@ -40,7 +38,7 @@ function pickAggressive(req, lines) {
   const list = [...lines].sort((a, b) => b.score - a.score);
   const best = list[0];
   if (!best || best.mate > 0) return best?.move;
-  const margin = Math.round(req.aggression * 0.25); // 0..25 cp: never trade real strength for style
+  const margin = Math.round(req.aggression * 0.25);
   let choice = best;
   let top = sharpness(req.fen, best.move);
   for (const c of list.slice(1)) {

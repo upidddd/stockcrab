@@ -1,6 +1,4 @@
-//! StockCrab · Status line and move list
-//! The panel's status line and the list of moves under it.
-//! File: content/ui/status.js. A content script (runs on chess.com and lichess pages); files of one kind share a single global scope and load in the order of manifest.json.
+// Panel status line and move list.
 
 function root() {
   return document.getElementById(PANEL_ID)?.shadowRoot;
@@ -47,8 +45,7 @@ function listMoves(marks, animate = false) {
   }
 }
 
-// "Best: Nf3 +0.40 · depth 24", and a warning when a castle is suggested on a position that was read from the screen
-// (its castling rights are only guessed).
+// Status line with the best move.
 function bestStatus(marks, res) {
   const m = marks[0];
   const exact = fenSource === "game" || fenSource === "page";

@@ -1,14 +1,11 @@
-//! StockCrab · Board reader
-//! Reads the position from the page (chess.com), repairs the side to move, checks that it is legal.
-//! File: content/board/reader.js. A content script (runs on chess.com and lichess pages); files of one kind share a single global scope and load in the order of manifest.json.
+// Reads the position from chess.com and checks that it is legal.
 
 let fenSource = "?";
-let turnMemory = { placement: null, turn: null, ep: "-" }; // the last position whose side to move was known for sure
-let lichessTurn = null; // same for lichess: { placement, turn }
-let lastRead = ""; // what was read from the page ("source · FEN"), shown when the mouse rests on the status line
+let turnMemory = { placement: null, turn: null, ep: "-" }; // last position with a known side to move
+let lichessTurn = null;
+let lastRead = "";
 
-// En passant target after a two-square pawn push (from -> to), but only if an enemy pawn could capture.
-// Squares are chess.com style "52" or algebraic "e2".
+// En passant square after a double pawn push, if it can be taken.
 function epTarget(bySq, from, to) {
   const norm = (q) => (/^\d\d$/.test(q) ? [Number(q[0]) - 1, Number(q[1])] : [FILES.indexOf(q[0]), Number(q[1])]);
   const [f1, r1] = norm(from);
@@ -40,8 +37,6 @@ function injectPageScript() {
 }
 injectPageScript();
 
-// How many squares differ between two FEN placements.
-// ---- is the position legal? A misread side to move shows up as the side NOT to move having its king attacked.
 function boardOf(fen) {
   const map = {};
   fen.split(" ")[0].split("/").forEach((row, i) => {
@@ -54,9 +49,7 @@ function boardOf(fen) {
   return map;
 }
 
-// Is the square (file 0-7, rank 1-8) attacked by the given side?
 function isAttacked(map, file, rank, byWhite) {
-  // null = an empty square, undefined = off the board
   const at = (f, r) => (f >= 0 && f < 8 && r >= 1 && r <= 8 ? (map[FILES[f] + r] ?? null) : undefined);
   const mine = (p) => p && (p === p.toUpperCase()) === byWhite;
   const pawnRank = rank + (byWhite ? -1 : 1);
@@ -82,8 +75,7 @@ function isAttacked(map, file, rank, byWhite) {
   return false;
 }
 
-// For positions read from the screen: if the side to move is wrong (the other side's king is in check, which
-// cannot happen), flip it. Returns { fen, ok, flipped }. A position where both kings are attacked is not legal.
+// Fixes the side to move of a position read from the screen.
 function sanitiseFen(fen) {
   const parts = fen.split(" ");
   const map = boardOf(fen);
@@ -100,7 +92,7 @@ function sanitiseFen(fen) {
   if (!otherInCheck) return { fen, ok: true, flipped: false };
   if (moverInCheck) return { fen, ok: false };
   parts[1] = whiteToMove ? "b" : "w";
-  parts[3] = "-"; // a stale en passant square belongs to the other side
+  parts[3] = "-";
   return { fen: parts.join(" "), ok: true, flipped: true };
 }
 
@@ -114,8 +106,7 @@ function placementDiff(a, b) {
   return d;
 }
 
-// The game's own position wins. What is drawn can legitimately differ from it by a few squares: a piece in
-// the user's hand, or a premove shown on the board. Only a position that is far off is treated as stale.
+// Game position vs drawn position.
 const MAX_DRAWN_DIFF = 4;
 function readFen(board) {
   if (SITE === "lichess") {
@@ -126,7 +117,7 @@ function readFen(board) {
   const placement = dom.split(" ")[0];
   const candidates = [];
   try {
-    const fen = board.wrappedJSObject?.game?.getFEN?.(); // read live, so it cannot be stale
+    const fen = board.wrappedJSObject?.game?.getFEN?.();
     if (typeof fen === "string") candidates.push(["game", String(fen)]);
   } catch (e) {}
   const attr = board.getAttribute("data-sp-fen");
@@ -172,8 +163,7 @@ function domFen(board) {
     return out + (empty || "");
   });
 
-  // The last move highlights exactly two squares. A third highlighted square is the piece the user has
-  // selected, which must not be mistaken for the opponent's last move.
+  // last-move highlights; a third square is the selected piece
   const lit = [];
   board.querySelectorAll(".highlight").forEach((el) => {
     if (el.classList.contains(MARK)) return;
@@ -195,7 +185,7 @@ function domFen(board) {
     }
     if (turn) turnMemory = { placement, turn, ep };
   } else if (turnMemory.placement === placement) {
-    turn = turnMemory.turn; // the same position as a moment ago (e.g. a piece is selected): keep what we knew
+    turn = turnMemory.turn;
     ep = turnMemory.ep;
   }
   if (!turn) turn = bottomColour(board);

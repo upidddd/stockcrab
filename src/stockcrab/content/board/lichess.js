@@ -1,8 +1,4 @@
-//! StockCrab · Lichess reader
-//! Reads the position from lichess's chessground board.
-//! File: content/board/lichess.js. A content script (runs on chess.com and lichess pages); files of one kind share a single global scope and load in the order of manifest.json.
-
-// ---- lichess.org (chessground) ----
+// Reads the position from lichess.
 
 function lichessBoard() {
   let best = null;
@@ -91,7 +87,6 @@ function lichessFen(wrap) {
     if (from && to) ep = epTarget(at, from, to);
   }
   if (!turn && lichessTurn) {
-    // no highlight (lichess lets the player switch it off): the same position as before, or one move later
     if (lichessTurn.placement === placement) turn = lichessTurn.turn;
     else {
       const next = lichessTurn.turn === "w" ? "b" : "w";
@@ -103,8 +98,8 @@ function lichessFen(wrap) {
     if (running) turn = running.classList.contains("rclock-bottom") ? bottom : bottom === "w" ? "b" : "w";
   }
   if (!turn && placement === "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR") turn = "w";
-  if (turn) lichessTurn = { placement, turn }; // known: remember it for the positions that follow
-  else turn = bottom; // a guess, not remembered
+  if (turn) lichessTurn = { placement, turn };
+  else turn = bottom;
 
   let castle = "";
   if (at.e1 === "K") {
@@ -118,7 +113,6 @@ function lichessFen(wrap) {
   return `${placement} ${turn} ${castle || "-"} ${ep} 0 1`;
 }
 
-// Раньше здесь были ограничения для Lichess. Теперь разрешаем везде:
 function lichessAllowed() {
   return true;
 }

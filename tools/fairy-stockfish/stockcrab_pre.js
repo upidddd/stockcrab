@@ -1,4 +1,4 @@
-// StockCrab: a plain UCI worker. Lines come in with postMessage and go out with postMessage.
+// UCI over postMessage.
 Module["print"] = (line) => postMessage(line);
 Module["printErr"] = (line) => postMessage("info string " + line);
 var scQueue = [];
@@ -12,8 +12,7 @@ self.onmessage = (e) => {
   }
 };
 Module["scNext"] = () => (scQueue.length ? Promise.resolve(scQueue.shift()) : new Promise((r) => (scWake = r)).then(() => scQueue.shift()));
-// During a search: 1 = stop (or quit), 2 = ponderhit, 0 = nothing more. "isready" at the front is answered at once;
-// any other command waits until the search ends, as the host never sends one mid-search.
+// During a search: 1 = stop, 2 = ponderhit, 0 = nothing.
 Module["scPoll"] = () => {
   while (scQueue.length && /^\s*isready\s*$/.test(scQueue[0])) {
     scQueue.shift();
