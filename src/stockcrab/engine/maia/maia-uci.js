@@ -16,7 +16,7 @@ const PIECES = "PNBRQKpnbrqk";
 let session = null;
 let loadError = null;
 let readyWaiting = false;
-const options = { multipv: 1, limit: false, elo: 1500, oppo: 0 };
+const options = { multipv: 1, limit: false, elo: 1500, oppo: 0, mateDepth: 3, mateTime: 300 };
 let board = new Chess();
 let searching = Promise.resolve();
 
@@ -105,11 +105,11 @@ function mustLose(c, n) {
 }
 
 // Mate scores for the ranked moves: "mate 3" we mate, "mate -2" they mate.
-function findMates(after, ms) {
+function findMates(after, ms, depth) {
   const found = after.map((c) => (c.isCheckmate() ? 1 : 0));
   deadline = performance.now() + ms;
   try {
-    for (let n = 1; n <= 3; n++) {
+    for (let n = 1; n <= depth; n++) {
       after.forEach((c, i) => {
         if (found[i] || c.isGameOver()) return;
         if (n > 1 && mustLose(c, n - 1)) found[i] = n;
@@ -162,7 +162,7 @@ async function go(board) {
   });
   const live = after.filter((c) => !c.isGameOver());
   const values = live.length ? (await infer(live, oppo, rating)).values : [];
-  const mates = findMates(after, 300);
+  const mates = findMates(after, options.mateTime, options.mateDepth);
   const ms = Math.max(1, Math.round(performance.now() - t0));
   let k = 0;
   ranked.forEach(({ move, share }, i) => {
@@ -211,6 +211,8 @@ function setoption(args) {
   else if (name === "uci_limitstrength") options.limit = value === "true";
   else if (name === "uci_elo") options.elo = parseInt(value, 10) || options.elo;
   else if (name === "opponent elo") options.oppo = parseInt(value, 10) || 0;
+  else if (name === "mate search") options.mateDepth = Math.max(0, Math.min(4, parseInt(value, 10) || 0));
+  else if (name === "mate search time") options.mateTime = Math.max(0, Math.min(3000, parseInt(value, 10) || 0));
 }
 
 const loading = (async () => {
@@ -235,6 +237,8 @@ self.onmessage = (e) => {
       say(`option name UCI_LimitStrength type check default false`);
       say(`option name UCI_Elo type spin default 1500 min ${RATING_MIN} max ${RATING_MAX}`);
       say(`option name Opponent Elo type spin default 0 min 0 max ${RATING_MAX}`);
+      say("option name Mate Search type spin default 3 min 0 max 4");
+      say("option name Mate Search Time type spin default 300 min 0 max 3000");
       say("uciok");
     } else if (cmd === "isready") {
       if (session) say("readyok");

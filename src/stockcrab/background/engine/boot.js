@@ -7,6 +7,7 @@ let bootTimer = null;
 
 function applyOptions() {
   sentOptions = new Map();
+  userOptions = new Set();
   option("Hash", 128);
   option("Threads", 1);
   option("Skill Level", 20);

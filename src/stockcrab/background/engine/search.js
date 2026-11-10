@@ -40,18 +40,24 @@ function start(req) {
   if (!model.noElo) option("UCI_ShowWDL", !!req.wdl);
   if (model.nnue) option("Use NNUE", req.nnue !== false);
   option("Hash", Math.min(req.hash || 128, model.maxHash));
+  applyUserOptions(req.uci);
   send(`position fen ${req.fen}${req.moves && req.moves.length ? " moves " + req.moves.join(" ") : ""}`);
   const go = ["go"];
-  if (req.depth > 0) go.push(`depth ${req.depth}`);
-  if (req.nodes > 0) go.push(`nodes ${req.nodes}`);
-  go.push(`movetime ${req.movetime}`);
+  if (model.quick) go.push(`depth ${Math.max(1, Math.min(30, req.quickDepth || 8))} movetime ${req.movetime}`);
+  else {
+    if (req.depth > 0) go.push(`depth ${req.depth}`);
+    if (req.nodes > 0) go.push(`nodes ${req.nodes}`);
+    go.push(`movetime ${req.movetime}`);
+  }
   send(req.goCmd ?? go.join(" "));
 }
 
 function onEngineMessage(event) {
   const line = typeof event.data === "string" ? event.data : "";
   if (line) lastLine = line.slice(0, 80);
-  if (line === "uciok") {
+  if (line.startsWith("option name ")) noteOption(line);
+  else if (line === "uciok") {
+    saveEngineOptions();
     if (!ready) send("isready");
   } else if (line === "readyok") {
     ready = true;

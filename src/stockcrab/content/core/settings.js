@@ -22,8 +22,8 @@ const DEFAULTS = {
   maiaMinShare: 5, // % of players
   openingWhite: "", // opening name, "Any book line" or "Gambits"; empty = engine only
   openingBlack: "",
-  showHud: false,
-  cursorTrail: false,
+  quickDepth: 8, // the Quick model's fixed depth
+  uci: {}, // the user's own engine options: model -> { option: value }
   bookMaxLoss: 150, // cp behind the engine's move; 500 = never leave the book
   // moves
   others: 2, // extra moves next to the best one
@@ -57,10 +57,16 @@ const DEFAULTS = {
   animate: true,
   flowColours: "crab", // "crab", "duo" or "off"
   // panel
+  theme: "auto", // "auto", "light" or "dark"
+  accent: "#e4572e", // panel, HUD and cursor trail
+  cursorTrail: false,
   corner: "br",
   hotkey: true,
-  sections: { presets: false, engine: true, moves: false, opening: false, premove: false, look: false, panel: false },
-  presets: {}, // name -> settings
+  showHud: false,
+  hudCorner: "tl",
+  checkUpdates: true,
+  sections: { configs: false, engine: true, uci: false, moves: false, opening: false, premove: false, look: false, panel: false },
+  presets: {}, // saved configs: name -> settings
 };
 let settings = JSON.parse(JSON.stringify(DEFAULTS));
 let lastKey = null;

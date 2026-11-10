@@ -4,9 +4,16 @@ let trailCanvas = null;
 let trailParts = [];
 let trailFrame = 0;
 
+// A colour mixed with white.
+function mixWhite(hex, k) {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v) => Math.round(v + (255 - v) * k).toString(16).padStart(2, "0");
+  return "#" + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
+}
+
 function trailColours() {
-  const base = settings.colourBest || "#e4572e";
-  return settings.flowColours === "duo" ? [base, settings.colourPremove || "#00b8d4"] : [base, deepShade(base), "#ff9a6b"];
+  const base = /^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : "#e4572e";
+  return settings.flowColours === "duo" ? [base, settings.colourPremove || "#00b8d4"] : [base, deepShade(base), mixWhite(base, 0.4)];
 }
 
 function trailSize() {

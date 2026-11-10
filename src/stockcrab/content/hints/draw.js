@@ -176,25 +176,32 @@ function drawMarks(board, marks, animate = false) {
 
     const fc = { x: from.x + from.w / 2, y: from.y + from.h / 2 };
     const tc = { x: to.x + to.w / 2, y: to.y + to.h / 2 };
-    const len = Math.hypot(tc.x - fc.x, tc.y - fc.y);
+    // a knight's arrow bends like an L: the long leg first
+    const dx = tc.x - fc.x;
+    const dy = tc.y - fc.y;
+    const knight = Math.abs(Math.abs(dx * dy) - 2 * sq * sq) < sq * sq * 0.2;
+    const path = knight ? [fc, Math.abs(dx) > Math.abs(dy) ? { x: tc.x, y: fc.y } : { x: fc.x, y: tc.y }, tc] : [fc, tc];
+    const last = path[path.length - 2];
+    const len = Math.hypot(tc.x - last.x, tc.y - last.y);
     const arrowParts = [];
     if (len) {
-      const ux = (tc.x - fc.x) / len;
-      const uy = (tc.y - fc.y) / len;
+      const ux = (tc.x - last.x) / len;
+      const uy = (tc.y - last.y) / len;
       const lw = (alt ? sq * 0.05 : sq * 0.075) * k;
-      const hl = settings.showHead ? Math.min(sq * 0.45, sq * (alt ? 0.22 : 0.27) * (0.6 + 0.4 * k)) : 0;
+      const hl = settings.showHead ? Math.min(sq * 0.45, len * 0.9, sq * (alt ? 0.22 : 0.27) * (0.6 + 0.4 * k)) : 0;
       const hw = hl * 0.6;
       const bx = tc.x - ux * hl;
       const by = tc.y - uy * hl;
-      const x2 = bx + ux * hl * 0.2;
-      const y2 = by + uy * hl * 0.2;
-      const line = svgEl("line", {
-        x1: fc.x, y1: fc.y, x2, y2, "stroke-linecap": "round",
+      const end = { x: bx + ux * hl * 0.2, y: by + uy * hl * 0.2 };
+      const pts = [...path.slice(0, -1), end];
+      const line = svgEl("polyline", {
+        points: pts.map((p) => `${p.x},${p.y}`).join(" "), fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round",
         stroke: paint(col), "stroke-width": lw,
       });
       shape.appendChild(line);
       if (anim) {
-        const L = Math.hypot(x2 - fc.x, y2 - fc.y);
+        let L = 0;
+        for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
         animateIn(line, [{ strokeDasharray: `${L}`, strokeDashoffset: L }, { strokeDasharray: `${L}`, strokeDashoffset: 0 }], 0, 200);
       }
       if (hl) {
@@ -206,24 +213,30 @@ function drawMarks(board, marks, animate = false) {
         shape.appendChild(headEl);
         if (anim) animateIn(headEl, [{ opacity: 0, transform: "scale(0.5)", transformOrigin: `${tip.x}px ${tip.y}px` }, { transform: "scale(1)", transformOrigin: `${tip.x}px ${tip.y}px` }], 120, 150);
       }
-      // blur shapes
+      // blur shapes and the areas the cards avoid, one per straight piece
       const half = lw / 2;
-      const back = lw / 2;
-      const sx = fc.x - ux * back;
-      const sy = fc.y - uy * back;
-      const shaft = [[sx - uy * half, sy + ux * half], [sx + uy * half, sy - ux * half], [x2 + uy * half, y2 - ux * half], [x2 - uy * half, y2 + ux * half]];
-      arrowParts.push(shaft);
+      for (let i = 1; i < pts.length; i++) {
+        const a0 = pts[i - 1];
+        const a1 = pts[i];
+        const l = Math.hypot(a1.x - a0.x, a1.y - a0.y);
+        if (!l) continue;
+        const vx = (a1.x - a0.x) / l;
+        const vy = (a1.y - a0.y) / l;
+        const sx = a0.x - vx * half;
+        const sy = a0.y - vy * half;
+        const ex = a1.x + (i < pts.length - 1 ? vx * half : 0);
+        const ey = a1.y + (i < pts.length - 1 ? vy * half : 0);
+        arrowParts.push([[sx - vy * half, sy + vx * half], [sx + vy * half, sy - vx * half], [ex + vy * half, ey - vx * half], [ex - vy * half, ey + vx * half]]);
+        if (blurLayer) blurBar(sx, sy, vx, vy, Math.hypot(ex - sx, ey - sy), lw, true);
+      }
       if (hl) arrowParts.push([[tc.x - ux * sq * 0.03, tc.y - uy * sq * 0.03], [bx - uy * hw, by + ux * hw], [bx + uy * hw, by - ux * hw]]);
-      if (blurLayer) {
-        blurBar(sx, sy, ux, uy, Math.hypot(x2 - sx, y2 - sy), lw, true);
-        if (hl) {
-          const tipX = tc.x - ux * sq * 0.03;
-          const tipY = tc.y - uy * sq * 0.03;
-          const len = Math.hypot(tipX - bx, tipY - by);
-          const n = 6;
-          for (let i = 0; i < n; i++) {
-            blurBar(bx + ux * (len * i) / n, by + uy * (len * i) / n, ux, uy, len / n, 2 * hw * (1 - (i + 0.5) / n), false);
-          }
+      if (blurLayer && hl) {
+        const tipX = tc.x - ux * sq * 0.03;
+        const tipY = tc.y - uy * sq * 0.03;
+        const hlen = Math.hypot(tipX - bx, tipY - by);
+        const n = 6;
+        for (let i = 0; i < n; i++) {
+          blurBar(bx + ux * (hlen * i) / n, by + uy * (hlen * i) / n, ux, uy, hlen / n, 2 * hw * (1 - (i + 0.5) / n), false);
         }
       }
     }

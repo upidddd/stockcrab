@@ -15,7 +15,7 @@ Best move, other good moves with a score for each, and a premove while your oppo
 [![Chrome](https://img.shields.io/badge/Chrome-Manifest%20V3-e4572e?style=flat-square&logo=googlechrome&logoColor=white&labelColor=262421)](#chrome-edge-brave)
 [![Engine](https://img.shields.io/badge/engine-Stockfish%2019-e4572e?style=flat-square&labelColor=262421)](#engines)
 [![License](https://img.shields.io/badge/license-GPL--3.0-e4572e?style=flat-square&labelColor=262421)](LICENSE)
-[![Privacy](https://img.shields.io/badge/network%20requests-none-e4572e?style=flat-square&labelColor=262421)](#privacy)
+[![Privacy](https://img.shields.io/badge/network-update%20check%20only-e4572e?style=flat-square&labelColor=262421)](#privacy)
 
 [**Install**](#install) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Premoves](#premoves) &nbsp;·&nbsp; [Settings](#settings) &nbsp;·&nbsp; [Fair play](#fair-play) &nbsp;·&nbsp; [Intro video](docs/intro.mp4)
 
@@ -38,17 +38,19 @@ Best move, other good moves with a score for each, and a premove while your oppo
 
 ## Features
 
-- **Hints on the board.** An arrow and outlined squares for the best move, a compact card on the target square with its score, plus up to three other good moves, drawn thinner. The colours slowly flow (orange and the crab's red, or orange and cyan, or off), a promotion says which piece (*= Queen*), and there is an optional blur under the arrows.
+- **Hints on the board.** An arrow (a knight's bends like an L) and outlined squares for the best move, a compact card on the target square with its score, plus up to three other good moves, drawn thinner. The colours slowly flow (orange and the crab's red, or orange and cyan, or off), a promotion says which piece (*= Queen*), and there is an optional blur under the arrows.
 - **Premoves.** While your opponent thinks, StockCrab can show the reply worth premoving, in three styles, including a rule-based pawn retake ([how](#premoves)).
 - **You choose the opponent.** Strength by Elo or Skill level, think time, depth and node limits, hash size, win / draw / loss, and an optional aggression slider (it gives up a little strength for sharper play). The panel shows only what the chosen model uses.
 - **Openings and gambits.** Pick an opening for White and for Black from 3,865 book lines (every named opening and gambit, or just *Gambits*): the hints follow it while the game stays in the book and the move is not much worse, then the engine takes over.
-- **HUD and cursor trail.** An optional card in the top left lists every feature that is on; an optional particle trail follows the mouse.
-- **Presets.** Ready sets of settings and your own: save, apply, copy and paste them as text.
-- **Eight engines.** Stockfish 19 (Full, Lite, JavaScript), Stockfish 17.1 (Full, Lite), Stockfish 11 classic, Fairy-Stockfish and Maia 3, a network that plays like people of a given rating. If one does not start, another takes over ([engines](#engines)).
+- **Every engine option.** Besides the main controls, *Engine options* lists everything the chosen engine offers (Move Overhead, nodestime, Contempt, Maia's mate search…) with your own values per model.
+- **Configs.** Save all your settings under a name, apply them, save them to a `.json` file and load them back.
+- **HUD, colours and cursor trail.** An optional list of every feature that is on, in any corner; a light or dark panel and your own accent colour; an optional particle trail behind the mouse.
+- **Updates.** The panel says when a new version is out; the Firefox build updates itself from the GitHub release.
+- **Nine engines.** Stockfish 19 (Full, Lite, Quick, JavaScript), Stockfish 17.1 (Full, Lite), Stockfish 11 classic, Fairy-Stockfish and Maia 3, a network that plays like people of a given rating. If one does not start, another takes over ([engines](#engines)).
 - **Honest numbers.** Only exact scores are used, lines come from the last *complete* depth, and a move never borrows the score of another move.
 - **Works on both sites.** chess.com and lichess, including analysis boards and puzzles (set *I play: Whoever is to move*).
-- **A panel that stays out of the way.** Flat and compact, light and dark theme, brand orange, `Alt+X` to switch on and off, four corners to dock to.
-- **Private.** The engine runs inside your browser. No servers, no accounts, no tracking ([privacy](#privacy)).
+- **A panel that stays out of the way.** Flat and compact, light and dark theme, brand orange, `Alt+X` to switch on and off, four corners to dock to; everything can be set while StockCrab is off.
+- **Private.** The engine runs inside your browser. No servers, no accounts, no tracking; the only request is the optional update check ([privacy](#privacy)).
 
 ## Install
 
@@ -98,13 +100,14 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 
 | Section | What you can set |
 |---|---|
-| **Presets** | built-in sets (deep analysis, quick hints, club player, Maia 1500 / 2200, Fairy-Stockfish, gambit player, clean look), your own saved sets, copy and paste them as text |
+| **Configs** | your own sets of all settings: save under a name, apply, delete, save to a file, load from a file |
 | **Engine** | model; strength by Elo (500 … max, within what the model allows) or by Skill level (0 – 20), think time (0.5 – 30 s), depth and node limits, aggression, hash (16 – 256 MB), win / draw / loss; NNUE or classical evaluation for Fairy-Stockfish; for Maia: players' and opponent's rating, what the card shows. Only the settings the chosen model uses are shown |
+| **Engine options** | every option the chosen engine reports (e.g. Move Overhead, nodestime, Ponder, UCI_Chess960; Contempt for Stockfish 11; Maia's mate search depth and time), with a reset |
 | **Moves** | how many other good moves (0 – 3) and how far behind they may be (for Maia: how many players play them), score units, the move list in the panel |
 | **Opening** | an opening for White and for Black (a name with its variations, *Any book line* or *Gambits*), how much worse than the engine's move a book move may be |
 | **Premove** | on or off, style, how sure the style has to be, how many likely replies are checked and for how long |
-| **Look** | colours, cursor trail, flowing colours, line width, opacity, blur under the hints, outline, arrow head, score, cell name, animations |
-| **Panel** | corner, which side I play, the `Alt+X` hotkey, the HUD |
+| **Look** | panel theme, accent colour, hint colours, cursor trail, flowing colours, line width, opacity, blur under the hints, outline, arrow head, score, cell name, animations |
+| **Panel** | corner, which side I play, the `Alt+X` hotkey, the HUD and its corner, update check |
 
 ## Engines
 
@@ -112,6 +115,7 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 |---|---|
 | Stockfish 19 · Full | the strongest, about 95 MB, the default |
 | Stockfish 19 · Lite | a small network, starts in a moment |
+| Stockfish 19 · Quick | the Lite network searched to a small fixed depth (1 – 20, 8 by default): answers at once, plays weaker |
 | Stockfish 19 · JavaScript | no WebAssembly, slowest, a last resort |
 | Stockfish 17.1 · Full / Lite | the previous generation |
 | Stockfish 11 · Classic | no Elo option in this build, so Elo is mapped onto Skill Level |
@@ -138,7 +142,7 @@ The Stockfish models are builds of [stockfish.js](https://github.com/nmrugg/stoc
 
 ## Privacy
 
-StockCrab makes **no network requests**. The engines are files in the extension and run in your browser. It asks only for the `storage` permission (your settings) and `clipboardWrite` (the *copy position* click), and it runs only on chess.com and lichess.org.
+The engines are files in the extension and run in your browser. The only network request is the update check: the panel asks GitHub (`api.github.com`) for the latest release at most every 6 hours, and *Panel → Check for updates* switches it off; the Firefox build also uses Firefox's own update check against the release. It asks only for the `storage` permission (your settings) and `clipboardWrite` (the *copy position* click), and it runs only on chess.com and lichess.org.
 
 ## Fair play
 

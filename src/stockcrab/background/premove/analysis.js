@@ -10,7 +10,7 @@ const isWhitePiece = (p) => p === p.toUpperCase();
 async function analysePremove(msg, mine, ctx) {
   const started = Date.now();
   const none = (reason, extra = {}) => ({ id: msg.id, premove: null, reason, ...extra });
-  const base = { id: msg.id, fen: msg.fen, elo: 3190, aggression: 0, hash: msg.hash, nnue: msg.nnue };
+  const base = { id: msg.id, fen: msg.fen, elo: 3190, aggression: 0, hash: msg.hash, nnue: msg.nnue, uci: msg.uci };
   const per = msg.per || Math.max(120, Math.min(300, Math.round((msg.movetime || 4000) / 25)));
   const gap = msg.gap ?? SAFE_GAP_CP;
 

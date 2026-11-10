@@ -35,6 +35,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     return msg.opening ? hintWithBook(msg) : submit(msg);
   }
   if (msg.type === "openings") return openingNames();
+  if (msg.type === "options") return Promise.resolve(engineOptions[msg.model] || null);
+  if (msg.type === "update") return checkUpdates(!!msg.force, msg.version).then(updateState);
+  if (msg.type === "install-update") return installUpdate();
   if (msg.type === "premove") return runPremove(msg);
 });
 

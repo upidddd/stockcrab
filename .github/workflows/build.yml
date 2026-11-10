@@ -40,6 +40,20 @@ jobs:
             dist/*.zip
           if-no-files-found: error
 
+      # Firefox's update manifest: installed copies update themselves from the latest release
+      - name: Update manifest
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          tag = os.environ["TAG"]; v = tag[1:]
+          gecko = json.load(open("src/stockcrab/manifest.json"))["browser_specific_settings"]["gecko"]
+          url = f"https://github.com/${{ github.repository }}/releases/download/{tag}/stockcrab-{v}.xpi"
+          json.dump({"addons": {gecko["id"]: {"updates": [{"version": v, "update_link": url}]}}}, open("dist/updates.json", "w"), indent=2)
+          PY
+
       - name: Publish
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -47,8 +61,8 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/*.xpi dist/*.zip --clobber
+            gh release upload "$TAG" dist/*.xpi dist/*.zip dist/updates.json --clobber
           else
-            gh release create "$TAG" dist/*.xpi dist/*.zip --title "StockCrab ${TAG#v}" --generate-notes \
+            gh release create "$TAG" dist/*.xpi dist/*.zip dist/updates.json --title "StockCrab ${TAG#v}" --generate-notes \
               --notes "Firefox: **stockcrab-${TAG#v}.xpi**. Chrome, Edge, Brave: **stockcrab-chrome-${TAG#v}.zip** (unzip, then Load unpacked). See the README."
           fi

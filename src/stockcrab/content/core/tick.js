@@ -93,7 +93,7 @@ async function tick() {
     setStatus(`Can't read the board (${pieceCount(fen)} pieces found)`, "err");
     return;
   }
-  const key = [fen, ...QUERY_KEYS.map((k) => settings[k])].join("|");
+  const key = [fen, ...QUERY_KEYS.map((k) => settings[k]), JSON.stringify((settings.uci || {})[settings.model] || {})].join("|");
   if (key === lastKey) return;
   if (key !== candidateKey) {
     candidateKey = key;
@@ -125,12 +125,13 @@ async function tick() {
       mine
         ? {
             type: "hint", id, fen,
-            elo: settings.elo, movetime: settings.movetime, depth: settings.depth, hash: settings.hash,
+            elo: settings.elo, movetime: modelInfo().quick ? 20000 : settings.movetime, depth: settings.depth, hash: settings.hash,
             aggression: settings.aggression,
             multipv: 1 + settings.others,
             nodes: settings.nodes * 1000, strengthBy: settings.strengthBy, skill: settings.skill,
             wdl: settings.showWdl, nnue: settings.useNnue,
             maiaRating: settings.maiaRating, maiaOppo: settings.maiaOppo,
+            uci: (settings.uci || {})[settings.model], quickDepth: settings.quickDepth,
             opening: (fen.split(" ")[1] === "w" ? settings.openingWhite : settings.openingBlack).trim(),
             bookMaxLoss: settings.bookMaxLoss >= 500 ? 1e9 : settings.bookMaxLoss,
           }
@@ -140,6 +141,7 @@ async function tick() {
             mode: settings.premoveMode, likelyCount: settings.likelyCount, likelyWithin: settings.likelyWithin,
             obviousLead: settings.obviousLead, replyGap: settings.replyGap,
             pawnTrade: settings.pawnTrade, tradeTolerance: settings.tradeTolerance, nnue: settings.useNnue,
+            uci: (settings.uci || {})[settings.model],
           },
     );
   } catch (e) {

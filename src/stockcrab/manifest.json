@@ -10,7 +10,8 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "chess-sparring@local"
+      "id": "chess-sparring@local",
+      "update_url": "https://github.com/upidddd/stockcrab/releases/latest/download/updates.json"
     }
   },
   "background": {
@@ -25,6 +26,7 @@
       "background/premove/pawn-trades.js",
       "background/premove/run.js",
       "background/book.js",
+      "background/updates.js",
       "background/main.js"
     ]
   },
