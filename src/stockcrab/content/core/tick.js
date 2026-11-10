@@ -114,8 +114,8 @@ async function tick() {
       keepAlive.onDisconnect.addListener(() => (keepAlive = null));
     } catch (e) {}
   }
-  if (!mine && !settings.premove) {
-    setStatus("Opponent's turn");
+  if (!mine && (!settings.premove || !searching(settings))) {
+    setStatus(settings.premove ? "Opponent's turn · premoves need a calculating model" : "Opponent's turn");
     return;
   }
   setStatus(mine ? "Thinking…" : `Opponent's turn, checking for a ${settings.premoveMode === "safe" ? "safe " : ""}premove…`, "busy");
@@ -128,13 +128,16 @@ async function tick() {
             elo: settings.elo, movetime: settings.movetime, depth: settings.depth, hash: settings.hash,
             aggression: settings.aggression,
             multipv: 1 + settings.others,
+            nodes: settings.nodes * 1000, strengthBy: settings.strengthBy, skill: settings.skill,
+            wdl: settings.showWdl, nnue: settings.useNnue,
+            maiaRating: settings.maiaRating, maiaOppo: settings.maiaOppo,
           }
         : {
             type: "premove", id, fen,
             movetime: settings.movetime, hash: settings.hash, gap: settings.safeGap, per: settings.premovePer,
             mode: settings.premoveMode, likelyCount: settings.likelyCount, likelyWithin: settings.likelyWithin,
             obviousLead: settings.obviousLead, replyGap: settings.replyGap,
-            pawnTrade: settings.pawnTrade, tradeTolerance: settings.tradeTolerance,
+            pawnTrade: settings.pawnTrade, tradeTolerance: settings.tradeTolerance, nnue: settings.useNnue,
           },
     );
   } catch (e) {

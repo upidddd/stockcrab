@@ -50,7 +50,8 @@ function bestStatus(marks, res) {
   const m = marks[0];
   const exact = fenSource === "game" || fenSource === "page";
   const parts = [`Best: ${m.san}  ${m.label}`.trim()];
-  if (res.depth) parts.push(`depth ${res.depth}`);
+  if (res.maia) parts.push(`players ${settings.maiaRating}`);
+  else if (res.depth) parts.push(`depth ${res.depth}`);
   if (!exact && /^O-O/.test(m.san)) parts.push("check that you can still castle");
   return parts.join(" · ");
 }

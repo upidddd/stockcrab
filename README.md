@@ -40,7 +40,8 @@ Best move, other good moves with a score for each, and a premove while your oppo
 
 - **Hints on the board.** An arrow and outlined squares for the best move, a compact card on the target square with its score, plus up to three other good moves, drawn thinner. The colours slowly flow (orange and the crab's red, or orange and cyan, or off), a promotion says which piece (*= Queen*), and there is an optional blur under the arrows.
 - **Premoves.** While your opponent thinks, StockCrab can show the reply worth premoving, in three styles, including a rule-based pawn retake ([how](#premoves)).
-- **You choose the opponent.** Strength from Elo 1320 up to full strength, think time, depth limit, hash size, and an optional aggression slider (it gives up a little strength for sharper play).
+- **You choose the opponent.** Strength by Elo or Skill level, think time, depth and node limits, hash size, win / draw / loss, and an optional aggression slider (it gives up a little strength for sharper play). The panel shows only what the chosen model uses.
+- **Presets.** Ready sets of settings and your own: save, apply, copy and paste them as text.
 - **Eight engines.** Stockfish 19 (Full, Lite, JavaScript), Stockfish 17.1 (Full, Lite), Stockfish 11 classic, Fairy-Stockfish and Maia 3, a network that plays like people of a given rating. If one does not start, another takes over ([engines](#engines)).
 - **Honest numbers.** Only exact scores are used, lines come from the last *complete* depth, and a move never borrows the score of another move.
 - **Works on both sites.** chess.com and lichess, including analysis boards and puzzles (set *I play: Whoever is to move*).
@@ -95,8 +96,9 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 
 | Section | What you can set |
 |---|---|
-| **Engine** | strength (Elo 1320 … max), think time (0.5 – 30 s), depth limit, aggression, hash (16 – 256 MB), model |
-| **Moves** | how many other good moves (0 – 3) and how far behind they may be, score units, the move list in the panel |
+| **Presets** | built-in sets (deep analysis, quick hints, club player, Maia 1500 / 2200, clean look), your own saved sets, copy and paste them as text |
+| **Engine** | model; strength by Elo (500 … max, within what the model allows) or by Skill level (0 – 20), think time (0.5 – 30 s), depth and node limits, aggression, hash (16 – 256 MB), win / draw / loss; NNUE or classical evaluation for Fairy-Stockfish; for Maia: players' and opponent's rating, what the card shows. Only the settings the chosen model uses are shown |
+| **Moves** | how many other good moves (0 – 3) and how far behind they may be (for Maia: how many players play them), score units, the move list in the panel |
 | **Premove** | on or off, style, how sure the style has to be, how many likely replies are checked and for how long |
 | **Look** | colours, flowing colours, line width, opacity, blur under the hints, outline, arrow head, score, cell name, animations |
 | **Panel** | corner, which side I play, the `Alt+X` hotkey |

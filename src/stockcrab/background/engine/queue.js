@@ -10,7 +10,8 @@ function submit(msg) {
   return new Promise((resolve) => {
     const req = {
       id: msg.id, fen: msg.fen, elo: msg.elo, movetime: msg.movetime, aggression: msg.aggression,
-      multipv: msg.multipv, moves: msg.moves, goCmd: msg.goCmd, hash: msg.hash, depth: msg.depth,
+      multipv: msg.multipv, moves: msg.moves, goCmd: msg.goCmd, hash: msg.hash, depth: msg.depth, nodes: msg.nodes,
+      strengthBy: msg.strengthBy, skill: msg.skill, wdl: msg.wdl, nnue: msg.nnue, maiaRating: msg.maiaRating, maiaOppo: msg.maiaOppo,
     };
     // timeout
     const timer = setTimeout(() => {

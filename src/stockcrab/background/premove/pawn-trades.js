@@ -56,7 +56,7 @@ async function pawnTradePremove(msg, mine, ctx) {
   if (!trades.length) return null;
   const rank = new Map(ctx.all.lines.map((l, i) => [l.move, i]));
   trades.sort((a, b) => rank.get(a.capture) - rank.get(b.capture));
-  const base = { id: msg.id, fen: msg.fen, elo: 3190, aggression: 0, hash: msg.hash };
+  const base = { id: msg.id, fen: msg.fen, elo: 3190, aggression: 0, hash: msg.hash, nnue: msg.nnue };
   const per = msg.per || Math.max(120, Math.min(300, Math.round((msg.movetime || 4000) / 25)));
   const tolerance = msg.tradeTolerance ?? 100;
   for (const t of trades.slice(0, 3)) {

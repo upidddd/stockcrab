@@ -5,13 +5,12 @@ let lastLine = "";
 let hello = null;
 let bootTimer = null;
 
-let currentHash = 128;
 function applyOptions() {
-  currentHash = 128;
-  send("setoption name Hash value 128");
-  send("setoption name Threads value 1");
-  send("setoption name Skill Level value 20");
-  send("setoption name Move Overhead value 30");
+  sentOptions = new Map();
+  option("Hash", 128);
+  option("Threads", 1);
+  option("Skill Level", 20);
+  option("Move Overhead", 30);
 }
 
 function spawn() {

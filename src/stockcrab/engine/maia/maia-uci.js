@@ -16,7 +16,7 @@ const PIECES = "PNBRQKpnbrqk";
 let session = null;
 let loadError = null;
 let readyWaiting = false;
-const options = { multipv: 1, limit: false, elo: 1500 };
+const options = { multipv: 1, limit: false, elo: 1500, oppo: 0 };
 let board = new Chess();
 let searching = Promise.resolve();
 
@@ -57,23 +57,28 @@ function tokens(chess, out, offset) {
 
 const uciOf = (m) => m.from + m.to + (m.promotion || "");
 
-// Value head as centipawns.
-function centipawns(l, d, w) {
+// Value head (loss, draw, win logits) as probabilities.
+function probabilities(l, d, w) {
   const top = Math.max(l, d, w);
   const [el, ed, ew] = [l, d, w].map((x) => Math.exp(x - top));
-  const p = Math.min(0.999, Math.max(0.001, (ew + 0.5 * ed) / (el + ed + ew)));
+  const sum = el + ed + ew;
+  return [el / sum, ed / sum, ew / sum];
+}
+
+// Win chance as centipawns, on the panel's win-chance curve.
+function centipawns([l, d, w]) {
+  const p = Math.min(0.999, Math.max(0.001, w + 0.5 * d));
   return Math.round(Math.log(p / (1 - p)) / 0.00368208);
 }
 
-async function infer(positions, rating) {
+async function infer(positions, self, oppo) {
   const n = positions.length;
   const data = new Float32Array(n * 64 * 12);
   positions.forEach((chess, i) => tokens(chess, data, i * 64 * 12));
-  const elo = new Float32Array(n).fill(rating);
   const out = await session.run({
     tokens: new ort.Tensor("float32", data, [n, 64, 12]),
-    elo_self: new ort.Tensor("float32", elo, [n]),
-    elo_oppo: new ort.Tensor("float32", elo.slice(), [n]),
+    elo_self: new ort.Tensor("float32", new Float32Array(n).fill(self), [n]),
+    elo_oppo: new ort.Tensor("float32", new Float32Array(n).fill(oppo), [n]),
   });
   return { moves: out.logits_move.data, values: out.logits_value.data };
 }
@@ -86,9 +91,11 @@ async function go(board) {
     say("bestmove (none)");
     return;
   }
-  const rating = options.limit ? Math.min(RATING_MAX, Math.max(RATING_MIN, options.elo)) : RATING_MAX;
+  const clamp = (v) => Math.min(RATING_MAX, Math.max(RATING_MIN, v));
+  const rating = options.limit ? clamp(options.elo) : RATING_MAX;
+  const oppo = options.oppo ? clamp(options.oppo) : rating;
   const black = board.turn() === "b";
-  const root = await infer([board], rating);
+  const root = await infer([board], rating, oppo);
   const logits = legal.map((m) => root.moves[moveIndex(black ? flipMove(uciOf(m)) : uciOf(m))]);
   const top = Math.max(...logits);
   const sum = logits.reduce((s, x) => s + Math.exp(x - top), 0);
@@ -103,19 +110,22 @@ async function go(board) {
     return c;
   });
   const live = after.filter((c) => !c.isGameOver());
-  const values = live.length ? (await infer(live, rating)).values : [];
+  const values = live.length ? (await infer(live, oppo, rating)).values : [];
   const ms = Math.max(1, Math.round(performance.now() - t0));
   let k = 0;
-  ranked.forEach(({ move }, i) => {
+  ranked.forEach(({ move, share }, i) => {
     const c = after[i];
-    let score;
-    if (c.isCheckmate()) score = "mate 1";
-    else if (c.isGameOver()) score = "cp 0";
+    let score, wdl;
+    if (c.isCheckmate()) (score = "mate 1"), (wdl = [1, 0, 0]);
+    else if (c.isGameOver()) (score = "cp 0"), (wdl = [0, 1, 0]);
     else {
       const j = k++;
-      score = "cp " + -centipawns(values[j * 3], values[j * 3 + 1], values[j * 3 + 2]);
+      const [theirL, d, theirW] = probabilities(values[j * 3], values[j * 3 + 1], values[j * 3 + 2]);
+      wdl = [theirL, d, theirW];
+      score = "cp " + centipawns([theirW, d, theirL]);
     }
-    say(`info depth 1 seldepth 1 multipv ${i + 1} score ${score} nodes ${ranked.length + 1} time ${ms} pv ${uciOf(move)}`);
+    const permille = wdl.map((x) => Math.round(x * 1000)).join(" ");
+    say(`info depth 1 seldepth 1 multipv ${i + 1} score ${score} wdl ${permille} nodes ${ranked.length + 1} time ${ms} share ${(share * 100).toFixed(1)} pv ${uciOf(move)}`);
   });
   say(`bestmove ${uciOf(ranked[0].move)}`);
 }
@@ -147,6 +157,7 @@ function setoption(args) {
   if (name === "multipv") options.multipv = Math.max(1, Math.min(64, parseInt(value, 10) || 1));
   else if (name === "uci_limitstrength") options.limit = value === "true";
   else if (name === "uci_elo") options.elo = parseInt(value, 10) || options.elo;
+  else if (name === "opponent elo") options.oppo = parseInt(value, 10) || 0;
 }
 
 const loading = (async () => {
@@ -170,6 +181,7 @@ self.onmessage = (e) => {
       say(`option name MultiPV type spin default 1 min 1 max 64`);
       say(`option name UCI_LimitStrength type check default false`);
       say(`option name UCI_Elo type spin default 1500 min ${RATING_MIN} max ${RATING_MAX}`);
+      say(`option name Opponent Elo type spin default 0 min 0 max ${RATING_MAX}`);
       say("uciok");
     } else if (cmd === "isready") {
       if (session) say("readyok");

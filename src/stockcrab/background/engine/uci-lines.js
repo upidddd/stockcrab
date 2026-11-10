@@ -14,7 +14,13 @@ function parseInfo(req, line) {
   const m = mate ? Number(mate[1]) : 0;
   const score = mate ? (m > 0 ? 100000 - m : -100000 - m) : Number(cp[1]);
   const byDepth = req.hist.get(mpv) ?? new Map();
-  byDepth.set(depth, { depth, move, pv, score, mate: m });
+  const wdl = / wdl (\d+) (\d+) (\d+)/.exec(line);
+  const share = / share ([\d.]+)/.exec(line);
+  byDepth.set(depth, {
+    depth, move, pv, score, mate: m,
+    wdl: wdl ? [Number(wdl[1]), Number(wdl[2]), Number(wdl[3])] : undefined,
+    share: share ? Number(share[1]) : undefined,
+  });
   while (byDepth.size > 4) byDepth.delete(Math.min(...byDepth.keys()));
   req.hist.set(mpv, byDepth);
 }

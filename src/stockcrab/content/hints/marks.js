@@ -41,17 +41,33 @@ function marksForMyTurn(res, others, fen) {
   const best = lines[0];
   // each move with its own score
   const chosen = lines.find((l) => l.move === res.move) || res.chosen || null;
+  const maia = !!res.maia;
   const make = (move, kind, line) => ({
-    move, kind, label: line ? scoreText(line, 1) : "", san: sanish(fen, move),
+    move, kind, san: sanish(fen, move),
+    label: !line ? "" : maia && settings.maiaShow === "share" && Number.isFinite(line.share) ? Math.round(line.share) + "%" : scoreText(line, 1),
+    detail: lineDetail(line, maia),
   });
   const marks = [make(res.move, "best", chosen)];
   for (const l of lines) {
     if (marks.length - 1 >= others) break;
     if (l.move === res.move) continue;
-    if (best && best.score - l.score > settings.goodWithin) continue;
+    if (maia ? l.share < settings.maiaMinShare : best && best.score - l.score > settings.goodWithin) continue;
     marks.push(make(l.move, "alt", l));
   }
   return marks;
+}
+
+// Detail row in the move list: share of players, win / draw / loss.
+function lineDetail(line, maia) {
+  if (!line) return "";
+  const parts = [];
+  if (maia && Number.isFinite(line.share)) parts.push(`${Math.round(line.share)}% of players`);
+  if (maia && settings.maiaShow === "share") parts.push(scoreText(line, 1));
+  if (settings.showWdl && line.wdl) {
+    const [w, d, l] = line.wdl.map((x) => Math.round(x / 10));
+    parts.push(`W ${w}% · D ${d}% · L ${l}%`);
+  }
+  return parts.join(" · ");
 }
 
 // Marks for the opponent's turn (premove).

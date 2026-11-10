@@ -11,6 +11,15 @@ const DEFAULTS = {
   hash: 128,
   side: "auto", // "auto", "w", "b" or "turn" (whoever is to move)
   model: "sf19-full",
+  strengthBy: "elo", // "elo" or "skill"
+  skill: 20, // Skill Level 0..20
+  nodes: 0, // thousands of nodes, 0 = no limit
+  showWdl: false,
+  useNnue: true, // Fairy-Stockfish: NNUE or classical evaluation
+  maiaRating: 1500,
+  maiaOppo: 500, // 500 = same as maiaRating
+  maiaShow: "share", // card shows "share" of players or "score"
+  maiaMinShare: 5, // % of players
   // moves
   others: 2, // extra moves next to the best one
   goodWithin: 50, // cp behind the best
@@ -45,7 +54,8 @@ const DEFAULTS = {
   // panel
   corner: "br",
   hotkey: true,
-  sections: { engine: true, moves: false, premove: false, look: false, panel: false },
+  sections: { presets: false, engine: true, moves: false, premove: false, look: false, panel: false },
+  presets: {}, // name -> settings
 };
 let settings = JSON.parse(JSON.stringify(DEFAULTS));
 let lastKey = null;

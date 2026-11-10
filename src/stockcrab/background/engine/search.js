@@ -17,25 +17,35 @@ function start(req) {
   if (newGame || !sameGame(req.fen)) send("ucinewgame");
   newGame = false;
   lastFen = req.fen;
-  send(`setoption name MultiPV value ${Math.min(256, Math.max(req.multipv ?? 1, req.aggression > 0 ? 2 : 1))}`);
+  option("MultiPV", Math.min(256, Math.max(req.multipv ?? 1, req.aggression > 0 ? 2 : 1)));
   const model = MODELS[modelId];
-  if (req.elo >= 3190) {
-    send("setoption name UCI_LimitStrength value false");
-    if (model.noElo) send("setoption name Skill Level value 20");
+  const clampElo = (v) => Math.max(model.elo[0], Math.min(model.elo[1], v));
+  if (model.maia) {
+    option("UCI_LimitStrength", true);
+    option("UCI_Elo", clampElo(req.maiaRating ?? 1500));
+    option("Opponent Elo", clampElo(req.maiaOppo > 500 ? req.maiaOppo : req.maiaRating ?? 1500));
+  } else if (req.strengthBy === "skill") {
+    if (!model.noElo) option("UCI_LimitStrength", false);
+    option("Skill Level", Math.max(0, Math.min(20, req.skill ?? 20)));
+  } else if (req.elo >= 3190) {
+    if (!model.noElo) option("UCI_LimitStrength", false);
+    option("Skill Level", 20);
   } else if (model.noElo) {
-    send(`setoption name Skill Level value ${Math.max(0, Math.min(20, Math.round(((req.elo - 1320) / (3190 - 1320)) * 20)))}`);
+    option("Skill Level", Math.max(0, Math.min(20, Math.round(((req.elo - 1320) / (3190 - 1320)) * 20))));
   } else {
-    send("setoption name UCI_LimitStrength value true");
-    const [lo, hi] = model.elo || [0, Infinity];
-    send(`setoption name UCI_Elo value ${Math.max(lo, Math.min(hi, req.elo))}`);
+    option("Skill Level", 20);
+    option("UCI_LimitStrength", true);
+    option("UCI_Elo", clampElo(req.elo));
   }
-  const hash = Math.min(req.hash || 128, model.maxHash);
-  if (hash !== currentHash) {
-    send(`setoption name Hash value ${hash}`);
-    currentHash = hash;
-  }
+  if (!model.noElo) option("UCI_ShowWDL", !!req.wdl);
+  if (model.nnue) option("Use NNUE", req.nnue !== false);
+  option("Hash", Math.min(req.hash || 128, model.maxHash));
   send(`position fen ${req.fen}${req.moves && req.moves.length ? " moves " + req.moves.join(" ") : ""}`);
-  send(req.goCmd ?? (req.depth > 0 ? `go depth ${req.depth} movetime ${req.movetime}` : `go movetime ${req.movetime}`));
+  const go = ["go"];
+  if (req.depth > 0) go.push(`depth ${req.depth}`);
+  if (req.nodes > 0) go.push(`nodes ${req.nodes}`);
+  go.push(`movetime ${req.movetime}`);
+  send(req.goCmd ?? go.join(" "));
 }
 
 function onEngineMessage(event) {
@@ -76,8 +86,9 @@ function onEngineMessage(event) {
     }
     const chosen = lines.find((l) => l.move === move) || deepestFor(done, move);
     done.resolve({
-      id: done.id, move, depth, chosen: chosen ? { move: chosen.move, score: chosen.score, mate: chosen.mate, depth: chosen.depth, pv: chosen.pv } : null,
-      lines: lines.map((c) => ({ move: c.move, pv: c.pv, score: c.score, mate: c.mate, depth: c.depth })),
+      id: done.id, move, depth, maia: !!MODELS[modelId].maia,
+      chosen: chosen ? { move: chosen.move, score: chosen.score, mate: chosen.mate, depth: chosen.depth, pv: chosen.pv, wdl: chosen.wdl, share: chosen.share } : null,
+      lines: lines.map((c) => ({ move: c.move, pv: c.pv, score: c.score, mate: c.mate, depth: c.depth, wdl: c.wdl, share: c.share })),
     });
   }
 }

@@ -15,6 +15,7 @@ try {
       Object.assign(settings, saved, { enabled: false });
       settings.version = DEFAULTS.version;
       settings.sections = { ...DEFAULTS.sections, ...(r.stockcrab.sections || {}) };
+      if (!settings.presets || typeof settings.presets !== "object") settings.presets = {};
       try {
         for (const c of CONTROLS) {
           // keep saved values inside the slider ranges
