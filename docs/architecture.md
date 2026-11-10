@@ -58,7 +58,8 @@ Names used in the README, in the code headers (the one-line comment at the top o
 | 7 | Premove analyst | `background/premove/analysis.js` | the reply worth premoving (safe, likely, smart) |
 | 8 | Pawn-trade rule | `background/premove/pawn-trades.js` | the rule-based pawn retake |
 | 9 | Premove runner | `background/premove/run.js` | one premove request |
-| 10 | Message router | `background/main.js` | switches engines, answers the content scripts, keeps the page alive |
+| 10 | Opening book | `background/book.js` | book moves of the chosen opening (`assets/openings.json`), checked against the engine |
+| 11 | Message router | `background/main.js` | switches engines, answers the content scripts, keeps the page alive |
 
 ## How a hint happens
 
@@ -70,7 +71,7 @@ Names used in the README, in the code headers (the one-line comment at the top o
    turns the engine's `info` lines into the answer, and the answer goes back.
 5. **Mark builder** makes marks out of it, **Hint painter** draws them, and the **Panel** lists them.
 
-Messages from the content scripts to the background: `status`, `engine` (switch model), `hint`, `premove`.
+Messages from the content scripts to the background: `status`, `engine` (switch model), `hint` (with `opening` it goes through the **Opening book**), `premove`, `openings` (names for the panel).
 
 ## Adding or moving a file
 

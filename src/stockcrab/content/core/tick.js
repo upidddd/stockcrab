@@ -131,6 +131,8 @@ async function tick() {
             nodes: settings.nodes * 1000, strengthBy: settings.strengthBy, skill: settings.skill,
             wdl: settings.showWdl, nnue: settings.useNnue,
             maiaRating: settings.maiaRating, maiaOppo: settings.maiaOppo,
+            opening: (fen.split(" ")[1] === "w" ? settings.openingWhite : settings.openingBlack).trim(),
+            bookMaxLoss: settings.bookMaxLoss >= 500 ? 1e9 : settings.bookMaxLoss,
           }
         : {
             type: "premove", id, fen,

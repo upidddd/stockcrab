@@ -58,6 +58,12 @@ const SECTIONS = [
     { key: "scoreUnits", type: "select", label: "Scores as", opts: [["pawns", "Pawns (+0.35)"], ["cp", "Centipawns (+35)"], ["win", "Win chance (62%)"]], fx: "render" },
     { key: "showList", type: "check", label: "Show the move list below", fx: "panel" },
   ]],
+  ["opening", "Opening", [
+    { key: "_openingNote", type: "note", text: "Hints follow the chosen opening while the game stays in its book, then the engine takes over. Type a name (Italian Game, Sicilian Defense: Najdorf…) or pick Any book line or Gambits." },
+    { key: "openingWhite", type: "opening", label: "As White", fx: "query" },
+    { key: "openingBlack", type: "opening", label: "As Black", fx: "query" },
+    { key: "bookMaxLoss", type: "range", label: "Leave the book if it is worse by", min: 20, max: 500, step: 10, fmt: (v) => (v >= 500 ? "never" : v + " cp"), fx: "query", when: (s) => !!(s.openingWhite || s.openingBlack) },
+  ]],
   ["premove", "Premove", [
     { key: "_premoveNote", type: "note", text: "Premoves need a model that calculates (Stockfish or Fairy-Stockfish).", when: (s) => !searching(s) },
     { key: "premove", type: "check", label: "Show a premove", fx: "query" },
@@ -96,8 +102,8 @@ for (const c of SECTIONS.find(([id]) => id === "premove")[2]) c.when ??= searchi
 const CONTROLS = SECTIONS.flatMap(([, , list]) => list);
 const QUERY_KEYS = CONTROLS.filter((c) => c.fx === "query" || c.fx === "engine").map((c) => c.key);
 
-// Presets: the settings of the Engine, Moves, Premove and Look sections.
-const PRESET_KEYS = SECTIONS.filter(([id]) => ["engine", "moves", "premove", "look"].includes(id))
+// Presets: the settings of the Engine, Moves, Opening, Premove and Look sections.
+const PRESET_KEYS = SECTIONS.filter(([id]) => ["engine", "moves", "opening", "premove", "look"].includes(id))
   .flatMap(([, , list]) => list)
   .filter((c) => !c.key.startsWith("_"))
   .map((c) => c.key);
@@ -109,6 +115,7 @@ const BUILTIN_PRESETS = {
   "Human moves · Maia 1500": { model: "maia3", maiaRating: 1500, maiaOppo: 500, maiaShow: "score", maiaMinShare: 5, others: 2 },
   "Human moves · Maia 2200": { model: "maia3", maiaRating: 2200, maiaOppo: 500, maiaShow: "score", maiaMinShare: 5, others: 2 },
   "Fairy-Stockfish": { model: "fairy", useNnue: true, strengthBy: "elo", elo: 3190, movetime: 4000, depth: 0, nodes: 0 },
+  "Gambit player": { openingWhite: "Gambits", openingBlack: "Gambits", bookMaxLoss: 200 },
   "Clean look": { others: 0, showOutline: false, showLabels: true, showSquare: false, blur: 0, opacity: 80, flowColours: "off" },
 };
 let presetPick = "Default";
@@ -132,6 +139,7 @@ function cleanPreset(values) {
     else if (c.type === "check" && typeof v === "boolean") out[c.key] = v;
     else if (c.type === "select" && c.opts.some(([o]) => o === v)) out[c.key] = v;
     else if (c.type === "color" && /^#[0-9a-f]{6}$/i.test(v)) out[c.key] = v;
+    else if (c.type === "opening" && typeof v === "string" && v.length <= 120) out[c.key] = v;
   }
   return out;
 }
@@ -270,6 +278,8 @@ const PANEL_CSS = `
   .chk input { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
   .sel { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11.5px; color: var(--muted); }
   .sel select { font: inherit; font-size: 11.5px; color: var(--fg); background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 3px 5px; max-width: 150px; }
+  .sel input.txt { font: inherit; font-size: 11.5px; color: var(--fg); background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; flex: 1; width: 0; min-width: 0; max-width: 170px; }
+  .sel input.txt:focus { outline: none; border-color: var(--accent); }
   .sel input[type=color] { width: 36px; height: 20px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
   .reset, .btn { font: inherit; font-size: 12px; color: var(--fg); background: var(--soft); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer; }
   .reset:hover, .btn:hover { border-color: var(--muted); }
@@ -320,6 +330,9 @@ function controlInner(c) {
     return `<label class="sel"><span>${c.label}</span><select data-key="${c.key}">${opts}</select></label>`;
   }
   if (c.type === "note") return `<div class="note">${c.text}</div>`;
+  if (c.type === "opening") {
+    return `<label class="sel"><span>${c.label}</span><input class="txt" data-key="${c.key}" list="sc-openings" placeholder="Engine only" spellcheck="false"></label>`;
+  }
   if (c.type === "presets") {
     return `<div class="pre">
       <div class="row"><select class="pre-list"></select><button class="btn main" data-act="apply">Apply</button></div>
@@ -350,7 +363,7 @@ function mountPanel() {
         <label class="sw" title="Alt+X"><input type="checkbox" class="on"><i></i></label>
         <button class="fold" title="Collapse">▾</button>
       </div>
-      <div class="body">${sections}</div>
+      <div class="body">${sections}<datalist id="sc-openings"></datalist></div>
       <div class="moves"></div>
       <div class="status"></div>
     </div>`;
@@ -397,6 +410,11 @@ function mountPanel() {
   shadow.addEventListener("input", onControl);
   shadow.addEventListener("change", onControl);
   shadow.querySelector(".pre-list").addEventListener("change", (e) => (presetPick = e.target.value));
+  shadow.querySelectorAll("input.txt").forEach((el) => el.addEventListener("keydown", (e) => {
+    e.stopPropagation();
+    if (e.key === "Enter") el.blur();
+  }));
+  loadOpeningNames(shadow);
   shadow.querySelector(".pre-name").addEventListener("keydown", (e) => {
     e.stopPropagation();
     if (e.key === "Enter") onPresetAction("save", shadow);
@@ -412,6 +430,16 @@ function mountPanel() {
   });
   syncPanel();
   refreshEngineInfo();
+}
+
+// Fills the opening suggestions once.
+async function loadOpeningNames(shadow) {
+  try {
+    const names = await browser.runtime.sendMessage({ type: "openings" });
+    if (!Array.isArray(names)) return;
+    const esc = (n) => n.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    shadow.querySelector("#sc-openings").innerHTML = ["Any book line", "Gambits", ...names].map((n) => `<option value="${esc(n)}">`).join("");
+  } catch (e) {}
 }
 
 function syncPanel() {

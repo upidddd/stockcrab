@@ -47,10 +47,24 @@ function marksForMyTurn(res, others, fen) {
     label: !line ? "" : maia && settings.maiaShow === "share" && Number.isFinite(line.share) ? Math.round(line.share) + "%" : scoreText(line, 1),
     detail: lineDetail(line, maia),
   });
+  const book = res.book && res.book.ok ? res.book : null;
   const marks = [make(res.move, "best", chosen)];
+  if (book) {
+    const opening = [book.eco, book.name].filter(Boolean).join(" ");
+    const mark = make(book.move, "best", book.line);
+    if (!book.line) mark.label = "book";
+    mark.detail = ["book", opening, mark.detail].filter(Boolean).join(" · ");
+    if (book.move === res.move) marks[0] = mark;
+    else {
+      marks[0].kind = "alt";
+      marks[0].detail = ["engine", marks[0].detail].filter(Boolean).join(" · ");
+      marks.unshift(mark);
+    }
+  }
+  const shown = book && book.move !== res.move ? 1 : 0;
   for (const l of lines) {
-    if (marks.length - 1 >= others) break;
-    if (l.move === res.move) continue;
+    if (marks.length - 1 - shown >= others) break;
+    if (marks.some((m) => m.move === l.move)) continue;
     if (maia ? l.share < settings.maiaMinShare : best && best.score - l.score > settings.goodWithin) continue;
     marks.push(make(l.move, "alt", l));
   }

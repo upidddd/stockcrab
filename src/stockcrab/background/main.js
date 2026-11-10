@@ -32,8 +32,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
   }
   if (msg.type === "hint") {
     if (job) job.cancelled = true;
-    return submit(msg);
+    return msg.opening ? hintWithBook(msg) : submit(msg);
   }
+  if (msg.type === "openings") return openingNames();
   if (msg.type === "premove") return runPremove(msg);
 });
 

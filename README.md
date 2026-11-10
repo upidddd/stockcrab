@@ -41,6 +41,7 @@ Best move, other good moves with a score for each, and a premove while your oppo
 - **Hints on the board.** An arrow and outlined squares for the best move, a compact card on the target square with its score, plus up to three other good moves, drawn thinner. The colours slowly flow (orange and the crab's red, or orange and cyan, or off), a promotion says which piece (*= Queen*), and there is an optional blur under the arrows.
 - **Premoves.** While your opponent thinks, StockCrab can show the reply worth premoving, in three styles, including a rule-based pawn retake ([how](#premoves)).
 - **You choose the opponent.** Strength by Elo or Skill level, think time, depth and node limits, hash size, win / draw / loss, and an optional aggression slider (it gives up a little strength for sharper play). The panel shows only what the chosen model uses.
+- **Openings and gambits.** Pick an opening for White and for Black from 3,865 book lines (every named opening and gambit, or just *Gambits*): the hints follow it while the game stays in the book and the move is not much worse, then the engine takes over.
 - **Presets.** Ready sets of settings and your own: save, apply, copy and paste them as text.
 - **Eight engines.** Stockfish 19 (Full, Lite, JavaScript), Stockfish 17.1 (Full, Lite), Stockfish 11 classic, Fairy-Stockfish and Maia 3, a network that plays like people of a given rating. If one does not start, another takes over ([engines](#engines)).
 - **Honest numbers.** Only exact scores are used, lines come from the last *complete* depth, and a move never borrows the score of another move.
@@ -96,9 +97,10 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 
 | Section | What you can set |
 |---|---|
-| **Presets** | built-in sets (deep analysis, quick hints, club player, Maia 1500 / 2200, clean look), your own saved sets, copy and paste them as text |
+| **Presets** | built-in sets (deep analysis, quick hints, club player, Maia 1500 / 2200, Fairy-Stockfish, gambit player, clean look), your own saved sets, copy and paste them as text |
 | **Engine** | model; strength by Elo (500 … max, within what the model allows) or by Skill level (0 – 20), think time (0.5 – 30 s), depth and node limits, aggression, hash (16 – 256 MB), win / draw / loss; NNUE or classical evaluation for Fairy-Stockfish; for Maia: players' and opponent's rating, what the card shows. Only the settings the chosen model uses are shown |
 | **Moves** | how many other good moves (0 – 3) and how far behind they may be (for Maia: how many players play them), score units, the move list in the panel |
+| **Opening** | an opening for White and for Black (a name with its variations, *Any book line* or *Gambits*), how much worse than the engine's move a book move may be |
 | **Premove** | on or off, style, how sure the style has to be, how many likely replies are checked and for how long |
 | **Look** | colours, flowing colours, line width, opacity, blur under the hints, outline, arrow head, score, cell name, animations |
 | **Panel** | corner, which side I play, the `Alt+X` hotkey |
@@ -148,11 +150,11 @@ src/stockcrab/       the extension: this folder is what Firefox loads
   content/           runs on the pages: board/ hints/ ui/ core/
   background/        hosts the engine: engine/ premove/
   engine/            the engine builds (Stockfish, Fairy-Stockfish, Maia 3) and their licences
-  assets/            the extension's icon
+  assets/            the extension's icon, the opening book (openings.json)
 docs/                banner, screenshots, the intro video, architecture notes
 packaging/           build_xpi.py (Firefox .xpi), build_chrome.py (Chrome folder and .zip)
 platforms/chrome/    the Chrome glue: service worker, offscreen engine host, API shims
-tools/               check.py checks the manifest and the scripts; fairy-stockfish/ builds Fairy-Stockfish
+tools/               check.py checks the manifest and the scripts; fairy-stockfish/ builds Fairy-Stockfish; openings/ builds the opening book
 .github/workflows/   builds both packages on every push and attaches them to a release
 ```
 
@@ -177,6 +179,7 @@ tools/               check.py checks the manifest and the scripts; fairy-stockfi
 | **Aggression picker** | `background/engine/aggression.js` | a sharper move among nearly equal ones |
 | **Premove analyst** | `background/premove/analysis.js` | the reply worth premoving (three styles) |
 | **Pawn-trade rule** | `background/premove/pawn-trades.js` | the rule-based pawn retake |
+| **Opening book** | `background/book.js` | the book moves of the chosen opening, checked against the engine |
 | **Message router** | `background/main.js` | switches engines, answers the content scripts |
 
 The complete list in load order, the data flow and how to add a file are in [`docs/architecture.md`](docs/architecture.md).
@@ -185,6 +188,7 @@ The complete list in load order, the data flow and how to add a file are in [`do
 
 - StockCrab is released under the **GNU GPL v3** ([LICENSE](LICENSE)), the same licence as the bundled engines.
 - Engines: [stockfish.js](https://github.com/nmrugg/stockfish.js) © Chess.com, LLC, and [Stockfish](https://github.com/official-stockfish/Stockfish) © the Stockfish developers (GPLv3).
+- Opening book: [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings) (CC0).
 - Intro video: music *Free Uplifting Music* by [Seth_Makes_Sounds](https://freesound.org/people/Seth_Makes_Sounds/sounds/670819/) (CC0); chess pieces in the video: cburnett set; typeface: Inter.
 - chess.com and lichess.org are trademarks of their owners. StockCrab is an independent project and is not affiliated with or endorsed by them.
 

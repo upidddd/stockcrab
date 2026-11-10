@@ -20,6 +20,9 @@ const DEFAULTS = {
   maiaOppo: 500, // 500 = same as maiaRating
   maiaShow: "score", // card shows "share" of players or "score"
   maiaMinShare: 5, // % of players
+  openingWhite: "", // opening name, "Any book line" or "Gambits"; empty = engine only
+  openingBlack: "",
+  bookMaxLoss: 150, // cp behind the engine's move; 500 = never leave the book
   // moves
   others: 2, // extra moves next to the best one
   goodWithin: 50, // cp behind the best
@@ -54,7 +57,7 @@ const DEFAULTS = {
   // panel
   corner: "br",
   hotkey: true,
-  sections: { presets: false, engine: true, moves: false, premove: false, look: false, panel: false },
+  sections: { presets: false, engine: true, moves: false, opening: false, premove: false, look: false, panel: false },
   presets: {}, // name -> settings
 };
 let settings = JSON.parse(JSON.stringify(DEFAULTS));

@@ -50,6 +50,8 @@ function bestStatus(marks, res) {
   const m = marks[0];
   const exact = fenSource === "game" || fenSource === "page";
   const parts = [`Best: ${m.san}  ${m.label}`.trim()];
+  if (res.book && res.book.ok) parts[0] = `Book: ${m.san}  ${m.label === "book" ? "" : m.label}`.trim() + (res.book.name ? ` · ${res.book.name}` : "");
+  else if (res.book) parts.push(`left the book: ${res.book.loss >= 5000 ? "its move loses" : `its move is worse by ${(res.book.loss / 100).toFixed(1)}`}`);
   if (res.maia) parts.push(`players ${settings.maiaRating}`);
   else if (res.depth) parts.push(`depth ${res.depth}`);
   if (!exact && /^O-O/.test(m.san)) parts.push("check that you can still castle");
