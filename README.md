@@ -42,6 +42,7 @@ Best move, other good moves with a score for each, and a premove while your oppo
 - **Premoves.** While your opponent thinks, StockCrab can show the reply worth premoving, in three styles, including a rule-based pawn retake ([how](#premoves)).
 - **You choose the opponent.** Strength by Elo or Skill level, think time, depth and node limits, hash size, win / draw / loss, and an optional aggression slider (it gives up a little strength for sharper play). The panel shows only what the chosen model uses.
 - **Openings and gambits.** Pick an opening for White and for Black from 3,865 book lines (every named opening and gambit, or just *Gambits*): the hints follow it while the game stays in the book and the move is not much worse, then the engine takes over.
+- **HUD and cursor trail.** An optional card in the top left lists every feature that is on; an optional particle trail follows the mouse.
 - **Presets.** Ready sets of settings and your own: save, apply, copy and paste them as text.
 - **Eight engines.** Stockfish 19 (Full, Lite, JavaScript), Stockfish 17.1 (Full, Lite), Stockfish 11 classic, Fairy-Stockfish and Maia 3, a network that plays like people of a given rating. If one does not start, another takes over ([engines](#engines)).
 - **Honest numbers.** Only exact scores are used, lines come from the last *complete* depth, and a move never borrows the score of another move.
@@ -102,8 +103,8 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 | **Moves** | how many other good moves (0 – 3) and how far behind they may be (for Maia: how many players play them), score units, the move list in the panel |
 | **Opening** | an opening for White and for Black (a name with its variations, *Any book line* or *Gambits*), how much worse than the engine's move a book move may be |
 | **Premove** | on or off, style, how sure the style has to be, how many likely replies are checked and for how long |
-| **Look** | colours, flowing colours, line width, opacity, blur under the hints, outline, arrow head, score, cell name, animations |
-| **Panel** | corner, which side I play, the `Alt+X` hotkey |
+| **Look** | colours, cursor trail, flowing colours, line width, opacity, blur under the hints, outline, arrow head, score, cell name, animations |
+| **Panel** | corner, which side I play, the `Alt+X` hotkey, the HUD |
 
 ## Engines
 
@@ -170,7 +171,8 @@ tools/               check.py checks the manifest and the scripts; fairy-stockfi
 | **Mark builder** | `content/hints/marks.js`, `score.js` | turns the engine's answer into the marks to draw, writes the scores |
 | **Hint painter** | `content/hints/draw.js` | arrows, outlines and cards over the board |
 | **Move finder** | `content/board/moves.js` | which move turned one position into the next (lichess side to move) |
-| **Panel** | `content/ui/panel.js`, `content/ui/status.js` | the settings panel, its status line and move list |
+| **Panel** | `content/ui/panel.js`, `content/ui/status.js` | the settings panel, its status line and move list, the HUD |
+| **Cursor trail** | `content/ui/trail.js` | particles behind the mouse pointer |
 | **Settings** | `content/core/settings.js` | defaults, saving, migration |
 | **Engine registry** | `background/engine/models.js` | the eight engine models |
 | **Search runner** and **Search queue** | `background/engine/search.js`, `queue.js` | one search at a time, a newer request replaces the waiting one |

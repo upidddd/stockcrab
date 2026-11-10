@@ -90,12 +90,14 @@ const SECTIONS = [
     { key: "showLabels", type: "check", label: "Score on the board", fx: "render" },
     { key: "showSquare", type: "check", label: "Cell name in the card", fx: "render" },
     { key: "animate", type: "check", label: "Animate new hints", fx: "panel" },
+    { key: "cursorTrail", type: "check", label: "Cursor trail", fx: "panel" },
     { key: "flowColours", type: "select", label: "Flowing colours", opts: [["crab", "Crab (orange · red)"], ["duo", "Orange · cyan"], ["off", "Off"]], fx: "render" },
   ]],
   ["panel", "Panel", [
     { key: "corner", type: "select", label: "Position", opts: [["br", "Bottom right"], ["bl", "Bottom left"], ["tr", "Top right"], ["tl", "Top left"]], fx: "panel" },
     { key: "side", type: "select", label: "I play", opts: [["auto", "Auto-detect"], ["w", "White"], ["b", "Black"], ["turn", "Whoever is to move"]], fx: "query" },
     { key: "hotkey", type: "check", label: "Alt+X turns StockCrab on/off", fx: "panel" },
+    { key: "showHud", type: "check", label: "HUD: active features in the top left", fx: "panel" },
   ]],
 ];
 for (const c of SECTIONS.find(([id]) => id === "premove")[2]) c.when ??= searching;
@@ -239,6 +241,21 @@ const PANEL_CSS = `
   @media (prefers-color-scheme: dark) {
     .box { --bg: #262421; --fg: #ececec; --muted: #9d9a95; --line: #3b3835; --soft: #312e2b; box-shadow: 0 8px 28px rgba(0, 0, 0, .5); }
   }
+  .hud {
+    --bg: rgba(255, 255, 255, .96); --fg: #22252a; --muted: #6b7280; --line: #e4e6ea; --accent: #e4572e;
+    position: fixed; z-index: 99999; left: 12px; top: 12px; min-width: 170px; max-width: 250px; padding: 7px 10px 7px 12px;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .18); pointer-events: none;
+    font: 11px/1.3 "Inter", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-variant-numeric: tabular-nums;
+  }
+  .hud.right { left: auto; right: 12px; }
+  .hud[hidden] { display: none; }
+  @media (prefers-color-scheme: dark) { .hud { --bg: rgba(38, 36, 33, .96); --fg: #ececec; --muted: #9d9a95; --line: #3b3835; } }
+  .hud .hh { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 11.5px; margin-bottom: 3px; }
+  .hud .dot { width: 6px; height: 6px; border-radius: 50%; background: #2ea043; }
+  .hud .hr { display: flex; justify-content: space-between; gap: 10px; padding: 1px 0; }
+  .hud .hr span { color: var(--muted); white-space: nowrap; }
+  .hud .hr b { font-weight: 600; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .c-br { right: 12px; bottom: 12px; } .c-bl { left: 12px; bottom: 12px; }
   .c-tr { right: 12px; top: 12px; } .c-tl { left: 12px; top: 12px; }
 
@@ -366,7 +383,8 @@ function mountPanel() {
       <div class="body">${sections}<datalist id="sc-openings"></datalist></div>
       <div class="moves"></div>
       <div class="status"></div>
-    </div>`;
+    </div>
+    <div class="hud" hidden></div>`;
   document.body.appendChild(host);
 
   // click copies what was read from the page
@@ -466,6 +484,46 @@ function syncPanel() {
     }
   }
   syncPresets(r);
+  syncHud(r);
+}
+
+// HUD rows: every feature that is switched on.
+function hudRows(s) {
+  const optText = (key) => {
+    const c = CONTROLS.find((x) => x.key === key);
+    return (c.opts.find(([v]) => v === s[key]) || [, s[key]])[1];
+  };
+  const rows = [["Engine", optText("model")]];
+  if (searching(s)) {
+    rows.push(["Strength", s.strengthBy === "skill" ? `Skill ${s.skill}` : s.elo >= 3190 ? "max" : `${s.elo} Elo`]);
+    rows.push(["Think", [(s.movetime / 1000).toFixed(1) + " s", s.depth && `depth ${s.depth}`, s.nodes && nodesText(s.nodes) + " nodes"].filter(Boolean).join(" · ")]);
+    if (s.aggression) rows.push(["Aggression", s.aggression + "%"]);
+    if (s.premove) rows.push(["Premove", optText("premoveMode")]);
+  } else rows.push(["Players", String(s.maiaRating)]);
+  if (s.others) rows.push(["Other moves", String(s.others)]);
+  if (s.showWdl) rows.push(["Win / draw / loss", "on"]);
+  if (s.openingWhite) rows.push(["Opening · White", s.openingWhite]);
+  if (s.openingBlack) rows.push(["Opening · Black", s.openingBlack]);
+  if (s.flowColours !== "off") rows.push(["Flowing colours", optText("flowColours").split(" (")[0]]);
+  if (s.blur) rows.push(["Blur", s.blur + " px"]);
+  if (s.cursorTrail) rows.push(["Cursor trail", "on"]);
+  if (s.hotkey) rows.push(["Hotkey", "Alt+X"]);
+  return rows;
+}
+
+function syncHud(r) {
+  const hud = r.querySelector(".hud");
+  if (!hud) return;
+  hud.hidden = !settings.showHud || !settings.enabled;
+  if (hud.hidden) return;
+  hud.classList.toggle("right", settings.corner === "tl");
+  const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const html = `<div class="hh"><span class="dot"></span>StockCrab</div>` +
+    hudRows(settings).map(([k, v]) => `<div class="hr"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join("");
+  if (hud.dataset.html !== html) {
+    hud.innerHTML = html;
+    hud.dataset.html = html;
+  }
 }
 
 function syncPresets(r) {

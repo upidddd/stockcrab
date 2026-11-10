@@ -22,6 +22,8 @@ const DEFAULTS = {
   maiaMinShare: 5, // % of players
   openingWhite: "", // opening name, "Any book line" or "Gambits"; empty = engine only
   openingBlack: "",
+  showHud: false,
+  cursorTrail: false,
   bookMaxLoss: 150, // cp behind the engine's move; 500 = never leave the book
   // moves
   others: 2, // extra moves next to the best one

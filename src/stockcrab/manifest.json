@@ -53,6 +53,7 @@
         "content/hints/show.js",
         "content/core/tick.js",
         "content/ui/panel.js",
+        "content/ui/trail.js",
         "content/core/main.js"
       ],
       "matches": [

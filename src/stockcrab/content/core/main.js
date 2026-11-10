@@ -38,6 +38,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 async function refreshEngineInfo() {
+  if (root()) syncHud(root());
   const el = root()?.querySelector(".einfo");
   if (!el) return;
   if (!settings.enabled) {

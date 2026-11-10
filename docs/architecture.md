@@ -42,8 +42,9 @@ Names used in the README, in the code headers (the one-line comment at the top o
 | 12 | Status line and move list | `content/ui/status.js` | the line and the list in the panel |
 | 13 | Show and rerender | `content/hints/show.js` | draws and lists marks; redraws after a look setting changes |
 | 14 | Main loop | `content/core/tick.js` | every 250 ms: read, ask, draw; retry after a failure |
-| 15 | Panel | `content/ui/panel.js` | the settings panel (shadow DOM) |
-| 16 | Entry point | `content/core/main.js` | loads the saved settings, the hotkey, the timers |
+| 15 | Panel | `content/ui/panel.js` | the settings panel and the HUD (shadow DOM) |
+| 16 | Cursor trail | `content/ui/trail.js` | particles behind the mouse pointer |
+| 17 | Entry point | `content/core/main.js` | loads the saved settings, the hotkey, the timers |
 
 ### Background scripts, in load order
 
