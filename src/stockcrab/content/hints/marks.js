@@ -56,14 +56,15 @@ function marksForMyTurn(res, others, fen) {
     mark.detail = ["book", opening, mark.detail].filter(Boolean).join(" · ");
     if (book.move === res.move) marks[0] = mark;
     else {
+      // the engine's own move becomes one of the "other moves", shown only when they are on
       marks[0].kind = "alt";
       marks[0].detail = ["engine", marks[0].detail].filter(Boolean).join(" · ");
       marks.unshift(mark);
+      if (others < 1) marks.length = 1;
     }
   }
-  const shown = book && book.move !== res.move ? 1 : 0;
   for (const l of lines) {
-    if (marks.length - 1 - shown >= others) break;
+    if (marks.length - 1 >= others) break;
     if (marks.some((m) => m.move === l.move)) continue;
     if (maia ? l.share < settings.maiaMinShare : best && best.score - l.score > settings.goodWithin) continue;
     marks.push(make(l.move, "alt", l));
