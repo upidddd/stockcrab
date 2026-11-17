@@ -6,8 +6,6 @@ const MODELS = {
   "sf19-full": { name: "Stockfish 19 Full", file: "engine/stockfish-19-single.js", bootMs: 60000, maxHash: 256, elo: [1320, 3190] },
   "sf19-lite": { name: "Stockfish 19 Lite", file: "engine/stockfish-19-lite-single.js", bootMs: 25000, maxHash: 256, elo: [1320, 3190], mobile: true },
   "sf19-quick": { name: "Stockfish 19 Quick", file: "engine/stockfish-19-lite-single.js", bootMs: 25000, maxHash: 256, elo: [1320, 3190], quick: true, mobile: true },
-  "sf17-full": { name: "Stockfish 17.1 Full", file: "engine/sf17/stockfish-17.1-single-a496a04.js", bootMs: 60000, maxHash: 256, elo: [1320, 3190] },
-  "sf17-lite": { name: "Stockfish 17.1 Lite", file: "engine/sf17/stockfish-17.1-lite-single-03e3232.js", bootMs: 25000, maxHash: 256, elo: [1320, 3190] },
   "sf11": { name: "Stockfish 11 Classic", file: "engine/sf11/stockfish.js", bootMs: 20000, maxHash: 64, noElo: true },
   "sf19-asm": { name: "Stockfish 19 JavaScript", file: "engine/stockfish-19-asm.js", bootMs: 30000, maxHash: 32, elo: [1320, 3190], mobile: true },
   "fairy": { name: "Fairy-Stockfish", file: "engine/fairy/fairy-stockfish.js", bootMs: 60000, maxHash: 256, elo: [500, 2850], nnue: true },

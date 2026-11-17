@@ -52,7 +52,7 @@ manifest["name"] = "StockCrab Lite"
 manifest["description"] = "The light StockCrab for phones: Stockfish move hints for chess.com and lichess.org."
 gecko = manifest["browser_specific_settings"]["gecko"]
 gecko["id"] = MOBILE_ID
-manifest["browser_specific_settings"]["gecko_android"] = {"strict_min_version": "120.0"}
+manifest["browser_specific_settings"]["gecko_android"] = {"strict_min_version": "142.0"}
 json.dump(manifest, open(os.path.join(OUT, "manifest.json"), "w", encoding="utf-8"), indent=2)
 
 missing = [f for f in sorted(keep) if not os.path.exists(os.path.join(OUT, f))]

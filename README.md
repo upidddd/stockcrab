@@ -46,7 +46,7 @@ Best move, other good moves with a score for each, and a premove while your oppo
 - **Every engine option.** Besides the main controls, *Engine options* lists everything the chosen engine offers (Move Overhead, nodestime, Contempt, Maia's mate search…) with your own values per model.
 - **Configs.** Save all your settings under a name, switch between them, export one to a `.json` file and import it back.
 - **StockCrab Lite for phones.** A light build of about 3 MB with the small engines and a panel along the bottom of the screen, sized for fingers ([install](#phones-stockcrab-lite)).
-- **Nine engines.** Stockfish 19 (Full, Lite, Quick, JavaScript), Stockfish 17.1 (Full, Lite), Stockfish 11 classic, Fairy-Stockfish and Maia 3, a network that plays like people of a given rating. If one does not start, another takes over ([engines](#engines)).
+- **Seven engines.** Stockfish 19 (Full, Lite, Quick, JavaScript), Stockfish 11 classic, Fairy-Stockfish and Maia 3, a network that plays like people of a given rating. If one does not start, another takes over ([engines](#engines)).
 - **Both sites.** chess.com and lichess, including analysis boards and puzzles (set *I play: Whoever is to move*).
 - **The panel.** Light or dark, your own accent colour, `Alt+X` to switch on and off, any of four corners; an optional HUD with the active features and a cursor trail.
 - **Updates.** The panel says when a new version is out; the Firefox builds update themselves from the GitHub release.
@@ -57,6 +57,10 @@ Best move, other good moves with a score for each, and a premove while your oppo
 StockCrab runs in **Firefox** and in **Chrome** (and Chromium browsers: Edge, Brave, Opera, Vivaldi). It is not in the add-on stores yet, so load it yourself.
 
 ### Firefox
+
+Download `stockcrab-<version>.xpi` from [Releases](https://github.com/upidddd/stockcrab/releases) and open it in Firefox (or drag it into a Firefox window). Release files are signed by Mozilla as an unlisted add-on, so any Firefox installs them, and the add-on updates itself from later releases.
+
+From the source code:
 
 1. Download the repository (**Code → Download ZIP**) and unpack it, or `git clone https://github.com/upidddd/stockcrab.git`.
 2. In Firefox open `about:debugging#/runtime/this-firefox`.
@@ -77,7 +81,7 @@ It is the same code as the Firefox version. Chrome's background is a service wor
 
 The light build is in [Releases](https://github.com/upidddd/stockcrab/releases): `stockcrab-lite-<version>.xpi` for Firefox, `stockcrab-lite-chrome-<version>.zip` for Chromium browsers that load extensions. It has Stockfish 19 Lite, Quick and JavaScript only, starts with the panel folded into a strip under the board (tap ▸ for the settings) and installs next to the full version. Build it yourself with `python3 packaging/build_mobile.py --chrome`.
 
-- **Firefox for Android** (Nightly or Beta): *Settings → About*, tap the Firefox logo five times to unlock the debug menu, set `xpinstall.signatures.required` to `false` in `about:config`, then *Settings → Install extension from file* and pick the `.xpi`. It updates itself from the releases like the desktop build.
+- **Firefox for Android** (Nightly or Beta): *Settings → About*, tap the Firefox logo five times to unlock the debug menu, then *Settings → Install extension from file* and pick the `.xpi` (signed by Mozilla, like the desktop build). It updates itself from the releases like the desktop build.
 - **Chromium browsers with extensions** (Lemur, Quetta and similar): unzip the `.zip`, open the browser's extensions page, switch on developer mode and load the folder.
 
 ### First start
@@ -138,7 +142,6 @@ Stockfish 11 has no `UCI_Elo`, so inside the range its Elo is mapped onto *Skill
 | Stockfish 19 · Lite | a small network, starts in a moment |
 | Stockfish 19 · Quick | the Lite network searched to a small fixed depth (1 – 20, 8 by default): answers at once, plays weaker |
 | Stockfish 19 · JavaScript | no WebAssembly, slowest, a last resort |
-| Stockfish 17.1 · Full / Lite | the previous generation |
 | Stockfish 11 · Classic | no Elo option in this build, so Elo is mapped onto Skill Level |
 | Fairy-Stockfish | another engine of the Stockfish family, with Stockfish's NNUE network; Elo 500 – 2850 |
 | Maia 3 · human-like | not a search: a neural network that suggests the moves people of the chosen rating (600 – 2600) play most, the most popular first; its scores are the network's own guess |
@@ -201,7 +204,7 @@ tools/               check.py checks the manifest and the scripts; fairy-stockfi
 | **Cursor trail** | `content/ui/trail.js` | a ribbon behind the mouse pointer |
 | **Settings** | `content/core/settings.js` | defaults, saving, migration |
 | **Build flag** | `build.js` | the full build or StockCrab Lite (shared by the page and the background) |
-| **Engine registry** | `background/engine/models.js` | the nine engine models |
+| **Engine registry** | `background/engine/models.js` | the seven engine models |
 | **Strength** | `background/engine/strength.js` | the Elo scale 200 – 3800 |
 | **Search runner** and **Search queue** | `background/engine/search.js`, `queue.js` | one search at a time, a newer request replaces the waiting one |
 | **UCI line builder** | `background/engine/uci-lines.js` | exact scores only, lines from the last complete depth |

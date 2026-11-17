@@ -16,7 +16,10 @@ permissions:
 jobs:
   extension:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 75
+    env:
+      AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
     steps:
       - uses: actions/checkout@v4
 
@@ -43,6 +46,23 @@ jobs:
             dist/*.xpi
             dist/*.zip
           if-no-files-found: error
+
+      # Mozilla signs both Firefox builds as unlisted (not in the store, installs in any Firefox); needs the AMO_JWT_* secrets,
+      # without them the release keeps the unsigned files
+      - name: Sign for Firefox
+        if: startsWith(github.ref, 'refs/tags/v') && env.AMO_JWT_ISSUER != ''
+        run: |
+          set -e
+          v="${GITHUB_REF_NAME#v}"
+          for pair in "src/stockcrab:stockcrab-$v.xpi" "dist/mobile:stockcrab-lite-$v.xpi"; do
+            src="${pair%%:*}"; out="${pair##*:}"
+            rm -rf dist/signed && mkdir -p dist/signed
+            npx --yes web-ext@8 sign --channel unlisted --source-dir "$src" --artifacts-dir dist/signed \
+              --api-key "$AMO_JWT_ISSUER" --api-secret "$AMO_JWT_SECRET" --timeout 1800000 --approval-timeout 1800000
+            mv dist/signed/*.xpi "dist/$out"
+            echo "signed $out"
+          done
+          rm -rf dist/signed
 
       # Firefox's update manifest: installed copies (the full one and Lite) update themselves from the latest release
       - name: Update manifest
