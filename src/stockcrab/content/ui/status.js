@@ -30,7 +30,7 @@ function listMoves(marks, animate = false) {
     const chip = el("span", "chip");
     chip.style.background = col;
     const name = el("span", "nm");
-    if (m.kind === "premove") name.append(el("span", "tag", "premove"));
+    if (m.kind === "premove" || m.kind === "threat") name.append(el("span", "tag", m.kind));
     name.append(el("b", "san", m.san || m.move), el("span", "co", pretty(m.move)));
     const det = m.detail || "";
     if (det) name.append(el("span", "dt", det));

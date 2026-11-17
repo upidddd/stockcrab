@@ -1,7 +1,8 @@
 name: Build
 
-# every push and pull request: check the extension, pack it for Firefox (.xpi) and Chrome (.zip), keep both as artifacts
-# a v* tag: the same, then attach both to a GitHub release
+# every push and pull request: check the extension, pack it for Firefox (.xpi) and Chrome (.zip), and the light build for
+# phones (StockCrab Lite, both formats), keep them as artifacts
+# a v* tag: the same, then attach them to a GitHub release
 on:
   push:
     branches: [main]
@@ -32,6 +33,9 @@ jobs:
       - name: Pack for Chrome
         run: python3 packaging/build_chrome.py
 
+      - name: Pack the light build for phones
+        run: python3 packaging/build_mobile.py --chrome
+
       - uses: actions/upload-artifact@v4
         with:
           name: stockcrab-packages
@@ -40,7 +44,7 @@ jobs:
             dist/*.zip
           if-no-files-found: error
 
-      # Firefox's update manifest: installed copies update themselves from the latest release
+      # Firefox's update manifest: installed copies (the full one and Lite) update themselves from the latest release
       - name: Update manifest
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -49,9 +53,12 @@ jobs:
           python3 - <<'PY'
           import json, os
           tag = os.environ["TAG"]; v = tag[1:]
-          gecko = json.load(open("src/stockcrab/manifest.json"))["browser_specific_settings"]["gecko"]
-          url = f"https://github.com/${{ github.repository }}/releases/download/{tag}/stockcrab-{v}.xpi"
-          json.dump({"addons": {gecko["id"]: {"updates": [{"version": v, "update_link": url}]}}}, open("dist/updates.json", "w"), indent=2)
+          base = f"https://github.com/${{ github.repository }}/releases/download/{tag}"
+          addons = {}
+          for manifest, xpi in (("src/stockcrab/manifest.json", f"stockcrab-{v}.xpi"), ("dist/mobile/manifest.json", f"stockcrab-lite-{v}.xpi")):
+              gecko = json.load(open(manifest))["browser_specific_settings"]["gecko"]
+              addons[gecko["id"]] = {"updates": [{"version": v, "update_link": f"{base}/{xpi}"}]}
+          json.dump({"addons": addons}, open("dist/updates.json", "w"), indent=2)
           PY
 
       - name: Publish
@@ -64,5 +71,5 @@ jobs:
             gh release upload "$TAG" dist/*.xpi dist/*.zip dist/updates.json --clobber
           else
             gh release create "$TAG" dist/*.xpi dist/*.zip dist/updates.json --title "StockCrab ${TAG#v}" --generate-notes \
-              --notes "Firefox: **stockcrab-${TAG#v}.xpi**. Chrome, Edge, Brave: **stockcrab-chrome-${TAG#v}.zip** (unzip, then Load unpacked). See the README."
+              --notes "Firefox: **stockcrab-${TAG#v}.xpi**. Chrome, Edge, Brave: **stockcrab-chrome-${TAG#v}.zip** (unzip, then Load unpacked). Phones: **stockcrab-lite-${TAG#v}.xpi** (Firefox for Android) or **stockcrab-lite-chrome-${TAG#v}.zip**. See the README."
           fi

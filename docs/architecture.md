@@ -8,6 +8,7 @@ can call a function in another. Load order matters only for code that runs the m
 ```
 src/stockcrab/
 ├── manifest.json
+├── build.js                which build this is: the full one or StockCrab Lite (loaded first, on the page and in the background)
 ├── assets/                 the extension's own icon (logo) in the sizes Firefox wants
 ├── content/                runs on chess.com and lichess pages
 │   ├── core/               constants, hold tracker, settings, main loop, entry point
@@ -28,40 +29,44 @@ Names used in the README, in the code headers (the one-line comment at the top o
 
 | # | Component | File | What it does |
 |---|---|---|---|
-| 1 | Constants | `content/core/constants.js` | panel id, mark class, logo, which site this is |
-| 2 | Hold tracker | `content/core/hold.js` | knows when a piece is in the user's hand |
-| 3 | Board finder | `content/board/find.js` | the game's board element |
-| 4 | Settings | `content/core/settings.js` | defaults, shared state, saving |
-| 5 | Orientation | `content/board/orientation.js` | which colour is at the bottom, which colour the user plays |
-| 6 | Board reader | `content/board/reader.js` | reads the position (chess.com), repairs the side to move, legality checks |
-| 7 | Lichess reader | `content/board/lichess.js` | reads the position from chessground |
-| 8 | Move finder | `content/board/moves.js` | plays a move on a board map, finds which move led from one position to the next |
-| 9 | Hint painter | `content/hints/draw.js` | arrows, outlines, cards, the blur layer |
-| 10 | Score text | `content/hints/score.js` | how a score is written (pawns, centipawns, win chance) |
-| 11 | Mark builder | `content/hints/marks.js` | engine answer → marks to draw |
-| 12 | Status line and move list | `content/ui/status.js` | the line and the list in the panel |
-| 13 | Show and rerender | `content/hints/show.js` | draws and lists marks; redraws after a look setting changes |
-| 14 | Main loop | `content/core/tick.js` | every 250 ms: read, ask, draw; retry after a failure |
-| 15 | Panel | `content/ui/panel.js` | the settings panel and the HUD (shadow DOM) |
-| 16 | Cursor trail | `content/ui/trail.js` | particles behind the mouse pointer |
-| 17 | Entry point | `content/core/main.js` | loads the saved settings, the hotkey, the timers |
+| 1 | Build flag | `build.js` | `BUILD`: `"desktop"` or `"mobile"` (StockCrab Lite) |
+| 2 | Constants | `content/core/constants.js` | panel id, mark class, logo, which site this is |
+| 3 | Hold tracker | `content/core/hold.js` | knows when a piece is in the user's hand |
+| 4 | Board finder | `content/board/find.js` | the game's board element |
+| 5 | Settings | `content/core/settings.js` | defaults (smaller ones in Lite), shared state, saving |
+| 6 | Orientation | `content/board/orientation.js` | which colour is at the bottom, which colour the user plays |
+| 7 | Board reader | `content/board/reader.js` | reads the position (chess.com), repairs the side to move, legality checks |
+| 8 | Lichess reader | `content/board/lichess.js` | reads the position from chessground |
+| 9 | Move finder | `content/board/moves.js` | plays a move on a board map, finds which move led from one position to the next |
+| 10 | Hint painter | `content/hints/draw.js` | arrows, outlines, cards, the dashed threat arrow, the blur layer |
+| 11 | Score text | `content/hints/score.js` | how a score is written (pawns, centipawns, win chance) |
+| 12 | Mark builder | `content/hints/marks.js` | engine answer → marks to draw; the best line as text; the threat position |
+| 13 | Evaluation bar | `content/hints/evalbar.js` | White's winning chances beside the board |
+| 14 | Status line and move list | `content/ui/status.js` | the line and the list in the panel |
+| 15 | Show and rerender | `content/hints/show.js` | draws and lists marks; redraws after a look setting changes |
+| 16 | Main loop | `content/core/tick.js` | every 250 ms: read, ask, draw; the threat search; retry after a failure |
+| 17 | Panel | `content/ui/panel.js` | the settings panel and the HUD (shadow DOM); the bottom sheet in Lite |
+| 18 | Cursor trail | `content/ui/trail.js` | a ribbon behind the mouse pointer |
+| 19 | Entry point | `content/core/main.js` | loads the saved settings, the hotkey, the timers |
 
 ### Background scripts, in load order
 
 | # | Component | File | What it does |
 |---|---|---|---|
-| 1 | Engine registry | `background/engine/models.js` | the engine builds, the state of the running engine |
-| 2 | Aggression picker | `background/engine/aggression.js` | a sharper move among nearly equal ones |
-| 3 | UCI line builder | `background/engine/uci-lines.js` | exact scores only, lines from the last complete depth |
-| 4 | Search runner | `background/engine/search.js` | one search: options, position, `go`, the answer |
-| 5 | Engine boot and recovery | `background/engine/boot.js` | starts the worker, falls back, restarts after a crash |
-| 6 | Search queue | `background/engine/queue.js` | one search at a time, a newer request replaces the waiting one |
-| 7 | Premove analyst | `background/premove/analysis.js` | the reply worth premoving (safe, likely, smart) |
-| 8 | Pawn-trade rule | `background/premove/pawn-trades.js` | the rule-based pawn retake |
-| 9 | Premove runner | `background/premove/run.js` | one premove request |
-| 10 | Opening book | `background/book.js` | book moves of the chosen opening (`assets/openings.json`), checked against the engine |
-| 11 | Update checker | `background/updates.js` | the latest GitHub release; Firefox installs it through `update_url` |
-| 12 | Message router | `background/main.js` | switches engines, answers the content scripts, keeps the page alive |
+| 1 | Build flag | `build.js` | `BUILD`: `"desktop"` or `"mobile"` (StockCrab Lite) |
+| 2 | Engine registry | `background/engine/models.js` | the engine builds (only the small ones in Lite), the state of the running engine |
+| 3 | Aggression picker | `background/engine/aggression.js` | a sharper move among nearly equal ones |
+| 4 | Strength | `background/engine/strength.js` | the Elo scale 200 – 3800: the engine's own limit, the pick below it, the node budget above it |
+| 5 | UCI line builder | `background/engine/uci-lines.js` | exact scores only, lines from the last complete depth |
+| 6 | Search runner | `background/engine/search.js` | one search: options, position, `go`, the answer |
+| 7 | Engine boot and recovery | `background/engine/boot.js` | starts the worker, falls back, restarts after a crash |
+| 8 | Search queue | `background/engine/queue.js` | one search at a time, a newer request replaces the waiting one |
+| 9 | Premove analyst | `background/premove/analysis.js` | the reply worth premoving (safe, likely, smart) |
+| 10 | Pawn-trade rule | `background/premove/pawn-trades.js` | the rule-based pawn retake |
+| 11 | Premove runner | `background/premove/run.js` | one premove request |
+| 12 | Opening book | `background/book.js` | book moves of the chosen opening (`assets/openings.json`), checked against the engine |
+| 13 | Update checker | `background/updates.js` | the latest GitHub release; Firefox installs it through `update_url` |
+| 14 | Message router | `background/main.js` | switches engines, answers the content scripts, keeps the page alive |
 
 ## How a hint happens
 
@@ -105,8 +110,18 @@ The blur under the hints uses plain boxes (four bars for an outline, a turned ba
 rounded boxes for cards), never `clip-path`: Chromium ignores `clip-path` on a `backdrop-filter` as soon as an
 ancestor clips with rounded corners, and chess.com's board does.
 
+## StockCrab Lite
+
+`packaging/build_mobile.py` copies the extension to `dist/mobile/` with only the engine files of the models marked
+`mobile: true` in `background/engine/models.js`, rewrites `build.js` to `const BUILD = "mobile";` and gives the add-on
+its own id (`stockcrab-lite@local`), so it installs next to the full version and updates from the same `updates.json`.
+With `BUILD === "mobile"` the registry drops the other models, the defaults are lighter (Stockfish 19 Lite, 3 s, 32 MB,
+no blur), the panel is a sheet along the bottom of the screen that starts folded, and the controls marked `desktop: true`
+(cursor trail, HUD, hotkey, corner, blur) are left out. `--chrome` also builds it for Chromium.
+
 ## Packing
 
 `python3 packaging/build_xpi.py` writes `dist/stockcrab-<version>.xpi`, `python3 packaging/build_chrome.py` writes `dist/chrome/`
-and `dist/stockcrab-chrome-<version>.zip`. The GitHub workflow in `.github/workflows/build.yml` runs the check and both
-packings on every push, and attaches both files to the release when a `v*` tag is pushed.
+and `dist/stockcrab-chrome-<version>.zip`, `python3 packaging/build_mobile.py --chrome` writes `dist/stockcrab-lite-<version>.xpi`
+and `dist/stockcrab-lite-chrome-<version>.zip`. The GitHub workflow in `.github/workflows/build.yml` runs the check and every
+packing on every push, and attaches the files to the release when a `v*` tag is pushed.

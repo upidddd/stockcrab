@@ -1,5 +1,6 @@
 // Settings panel and HUD.
 
+const MOBILE_MODELS = ["sf19-lite", "sf19-quick", "sf19-asm"]; // the light build ships only these
 const MODEL_OPTIONS = [
   ["sf19-full", "Stockfish 19 · Full"],
   ["sf19-lite", "Stockfish 19 · Lite"],
@@ -10,7 +11,7 @@ const MODEL_OPTIONS = [
   ["sf19-asm", "Stockfish 19 · JavaScript"],
   ["fairy", "Fairy-Stockfish"],
   ["maia3", "Maia 3 · human-like"],
-];
+].filter(([id]) => !MOBILE || MOBILE_MODELS.includes(id));
 
 // What each model can do; the panel shows only the settings that apply.
 const MODEL_INFO = {
@@ -28,11 +29,7 @@ const modelInfo = (s = settings) => MODEL_INFO[s.model] || {};
 const searching = (s) => !modelInfo(s).maia;
 const timed = (s) => searching(s) && !modelInfo(s).quick;
 
-function eloText(v) {
-  if (v >= 3190) return "max";
-  const [lo, hi] = modelInfo().elo || [500, 3190];
-  return v < lo ? `${lo} (lowest)` : v > hi ? `${hi} (highest)` : v;
-}
+const eloText = (v) => (v >= 3800 ? "3800 · full" : v);
 const nodesText = (v) => (!v ? "off" : v < 1000 ? v + "k" : (v / 1000).toFixed(v % 1000 ? 2 : 0) + "M");
 const secText = (v) => (v / 1000).toFixed(1) + " s";
 const CORNERS = [["tl", "Top left"], ["tr", "Top right"], ["bl", "Bottom left"], ["br", "Bottom right"]];
@@ -41,78 +38,83 @@ const SECTIONS = [
   ["configs", "Configs", [{ key: "_configs", type: "configs" }]],
   ["engine", "Engine", [
     { key: "model", type: "select", label: "Model", opts: MODEL_OPTIONS, fx: "engine" },
-    { key: "_maiaNote", type: "note", text: "Maia does not calculate: it suggests the moves people of this rating play most.", when: (s) => !searching(s) },
-    { key: "_quickNote", type: "note", text: "Quick searches every position to a small fixed depth: it answers at once and plays weaker.", when: (s) => !!modelInfo(s).quick },
+    { key: "_maiaNote", type: "note", text: "Maia suggests the moves players of this rating play most.", when: (s) => !searching(s) },
     { key: "maiaRating", type: "range", label: "Players' rating", min: 600, max: 2600, step: 50, fmt: (v) => v, fx: "query", when: (s) => !searching(s) },
     { key: "maiaOppo", type: "range", label: "Opponent's rating", min: 500, max: 2600, step: 50, fmt: (v) => (v <= 500 ? "same" : v), fx: "query", when: (s) => !searching(s) },
     { key: "maiaShow", type: "select", label: "Card shows", opts: [["score", "Score"], ["share", "Share of players"]], fx: "render", when: (s) => !searching(s) },
     { key: "quickDepth", type: "range", label: "Depth", min: 1, max: 20, step: 1, fmt: (v) => v, fx: "query", when: (s) => !!modelInfo(s).quick },
     { key: "strengthBy", type: "select", label: "Strength by", opts: [["elo", "Elo"], ["skill", "Skill level"]], fx: "query", when: searching },
-    { key: "elo", type: "range", label: "Strength (Elo)", min: 500, max: 3190, step: 10, fmt: eloText, fx: "query", when: (s) => searching(s) && s.strengthBy !== "skill" },
+    { key: "elo", type: "range", label: "Strength (Elo)", min: 200, max: 3800, step: 10, fmt: eloText, fx: "query", when: (s) => searching(s) && s.strengthBy !== "skill" },
     { key: "skill", type: "range", label: "Skill level", min: 0, max: 20, step: 1, fmt: (v) => (v >= 20 ? "20 (max)" : v), fx: "query", when: (s) => searching(s) && s.strengthBy === "skill" },
     { key: "movetime", type: "range", label: "Think time", min: 500, max: 30000, step: 500, fmt: secText, fx: "query", when: timed },
     { key: "depth", type: "range", label: "Max depth", min: 0, max: 40, step: 1, fmt: (v) => (v ? v : "off"), fx: "query", when: timed },
     { key: "nodes", type: "range", label: "Max nodes", min: 0, max: 5000, step: 50, fmt: nodesText, fx: "query", when: timed },
-    { key: "aggression", type: "range", label: "Aggression (costs strength)", min: 0, max: 100, step: 10, fmt: (v) => v + "%", fx: "query", when: searching },
+    { key: "aggression", type: "range", label: "Aggression", min: 0, max: 100, step: 10, fmt: (v) => v + "%", fx: "query", when: searching },
     { key: "hash", type: "range", label: "Hash memory", min: 16, max: 256, step: 16, fmt: (v) => Math.min(v, modelInfo().maxHash || 256) + " MB", fx: "query", when: searching },
-    { key: "useNnue", type: "check", label: "NNUE evaluation (off = classical)", fx: "query", when: (s) => !!modelInfo(s).nnue },
+    { key: "useNnue", type: "check", label: "NNUE evaluation", fx: "query", when: (s) => !!modelInfo(s).nnue },
     { key: "showWdl", type: "check", label: "Show win / draw / loss", fx: "query", when: (s) => !modelInfo(s).noWdl },
   ]],
   ["uci", "Engine options", [{ key: "_uci", type: "uci" }]],
   ["moves", "Moves", [
     { key: "others", type: "range", label: (s) => (searching(s) ? "Other good moves" : "Other popular moves"), min: 0, max: 3, step: 1, fmt: (v) => (v ? v : "none"), fx: "query" },
-    { key: "goodWithin", type: "range", label: "“Good” = at most this far behind", min: 10, max: 150, step: 10, fmt: (v) => v + " cp", fx: "render", when: searching },
+    { key: "goodWithin", type: "range", label: "Other moves: at most behind by", min: 10, max: 150, step: 10, fmt: (v) => v + " cp", fx: "render", when: searching },
     { key: "maiaMinShare", type: "range", label: "Played by at least", min: 1, max: 30, step: 1, fmt: (v) => v + "%", fx: "render", when: (s) => !searching(s) },
     { key: "scoreUnits", type: "select", label: "Scores as", opts: [["pawns", "Pawns (+0.35)"], ["cp", "Centipawns (+35)"], ["win", "Win chance (62%)"]], fx: "render" },
-    { key: "showList", type: "check", label: "Show the move list below", fx: "panel" },
+    { key: "scoresFor", type: "select", label: "Scores for", opts: [["mover", "Side to move"], ["white", "White"]], fx: "render" },
+    { key: "showList", type: "check", label: "Move list in the panel", fx: "panel" },
+  ]],
+  ["analysis", "Analysis", [
+    { key: "evalBar", type: "check", label: "Evaluation bar", fx: "panel" },
+    { key: "lineLength", type: "range", label: "Best line in the list", min: 0, max: 10, step: 1, fmt: (v) => (v ? v + " moves" : "off"), fx: "render" },
+    { key: "threat", type: "check", label: "Show the opponent's threat", fx: "query", when: searching },
+    { key: "colourThreat", type: "color", label: "Threat colour", fx: "render", when: (s) => searching(s) && s.threat },
   ]],
   ["opening", "Opening", [
-    { key: "_openingNote", type: "note", text: "Hints follow the chosen opening while the game stays in its book, then the engine takes over." },
     { key: "openingWhite", type: "opening", label: "As White", fx: "query" },
     { key: "openingBlack", type: "opening", label: "As Black", fx: "query" },
-    { key: "bookMaxLoss", type: "range", label: "Leave the book if it is worse by", min: 20, max: 500, step: 10, fmt: (v) => (v >= 500 ? "never" : v + " cp"), fx: "query", when: (s) => !!(s.openingWhite || s.openingBlack) },
+    { key: "bookMaxLoss", type: "range", label: "Leave the book when worse by", min: 20, max: 500, step: 10, fmt: (v) => (v >= 500 ? "never" : v + " cp"), fx: "query", when: (s) => !!(s.openingWhite || s.openingBlack) },
   ]],
   ["premove", "Premove", [
-    { key: "_premoveNote", type: "note", text: "Premoves need a model that calculates (Stockfish or Fairy-Stockfish).", when: (s) => !searching(s) },
+    { key: "_premoveNote", type: "note", text: "Premoves need Stockfish or Fairy-Stockfish.", when: (s) => !searching(s) },
     { key: "premove", type: "check", label: "Show a premove", fx: "query", when: searching },
     { key: "premoveMode", type: "select", label: "Style", opts: [["smart", "When it's worth it"], ["likely", "Always, just in case"], ["safe", "Only if it's safe"]], fx: "query", when: (s) => searching(s) && s.premove },
-    { key: "obviousLead", type: "range", label: "Worth it: their best move leads by", min: 20, max: 400, step: 20, fmt: (v) => v + " cp", fx: "query", when: (s) => searching(s) && s.premove && s.premoveMode === "smart" },
-    { key: "replyGap", type: "range", label: "Worth it: your reply leads by", min: 5, max: 100, step: 5, fmt: (v) => v + " cp", fx: "query", when: (s) => searching(s) && s.premove && s.premoveMode === "smart" },
+    { key: "obviousLead", type: "range", label: "Their best move leads by", min: 20, max: 400, step: 20, fmt: (v) => v + " cp", fx: "query", when: (s) => searching(s) && s.premove && s.premoveMode === "smart" },
+    { key: "replyGap", type: "range", label: "Your reply leads by", min: 5, max: 100, step: 5, fmt: (v) => v + " cp", fx: "query", when: (s) => searching(s) && s.premove && s.premoveMode === "smart" },
     { key: "likelyCount", type: "range", label: "Likely opponent moves checked", min: 1, max: 8, step: 1, fmt: (v) => v, fx: "query", when: (s) => searching(s) && s.premove && s.premoveMode !== "safe" },
-    { key: "likelyWithin", type: "range", label: "“Likely” = within", min: 20, max: 300, step: 20, fmt: (v) => v + " cp", fx: "query", when: (s) => searching(s) && s.premove && s.premoveMode !== "safe" },
-    { key: "safeGap", type: "range", label: "“Safe”: your reply leads by", min: 5, max: 100, step: 5, fmt: (v) => v + " cp", fx: "query", when: (s) => searching(s) && s.premove && s.premoveMode === "safe" },
+    { key: "likelyWithin", type: "range", label: "Likely moves: within", min: 20, max: 300, step: 20, fmt: (v) => v + " cp", fx: "query", when: (s) => searching(s) && s.premove && s.premoveMode !== "safe" },
+    { key: "safeGap", type: "range", label: "Your reply leads by", min: 5, max: 100, step: 5, fmt: (v) => v + " cp", fx: "query", when: (s) => searching(s) && s.premove && s.premoveMode === "safe" },
     { key: "premovePer", type: "range", label: "Check time per opponent move", min: 80, max: 600, step: 20, fmt: (v) => v + " ms", fx: "query", when: (s) => searching(s) && s.premove },
     { key: "pawnTrade", type: "check", label: "Premove pawn retakes", fx: "query", when: (s) => searching(s) && s.premove },
-    { key: "tradeTolerance", type: "range", label: "Skip the retake if it is worse by", min: 20, max: 300, step: 20, fmt: (v) => v + " cp", fx: "query", when: (s) => searching(s) && s.premove && s.pawnTrade },
+    { key: "tradeTolerance", type: "range", label: "Skip the retake when worse by", min: 20, max: 300, step: 20, fmt: (v) => v + " cp", fx: "query", when: (s) => searching(s) && s.premove && s.pawnTrade },
   ]],
   ["look", "Look", [
     { key: "theme", type: "select", label: "Panel theme", opts: [["auto", "Like the system"], ["light", "Light"], ["dark", "Dark"]], fx: "panel" },
-    { key: "accent", type: "color", label: "Accent colour (panel, HUD, trail)", fx: "panel" },
+    { key: "accent", type: "color", label: "Accent colour", fx: "panel" },
     { key: "colourBest", type: "color", label: "Best move colour", fx: "render" },
     { key: "colourAlt", type: "color", label: "Other moves colour", fx: "render" },
     { key: "colourPremove", type: "color", label: "Premove colour", fx: "render" },
     { key: "colourOutline", type: "color", label: "Square outline colour", fx: "render" },
     { key: "lineWidth", type: "range", label: "Line width", min: 50, max: 200, step: 10, fmt: (v) => v + "%", fx: "render" },
     { key: "opacity", type: "range", label: "Opacity", min: 30, max: 100, step: 5, fmt: (v) => v + "%", fx: "render" },
-    { key: "blur", type: "range", label: "Blur under the hints", min: 0, max: 12, step: 1, fmt: (v) => (v ? v + " px" : "off"), fx: "render" },
-    { key: "flowColours", type: "select", label: "Flowing colours", opts: [["crab", "Crab (orange · red)"], ["duo", "Orange · cyan"], ["off", "Off"]], fx: "render" },
+    { key: "blur", type: "range", label: "Blur under the hints", min: 0, max: 12, step: 1, fmt: (v) => (v ? v + " px" : "off"), fx: "render", desktop: true },
     { key: "showOutline", type: "check", label: "Outline the squares", fx: "render" },
     { key: "showHead", type: "check", label: "Arrow head", fx: "render" },
     { key: "showLabels", type: "check", label: "Score on the board", fx: "render" },
-    { key: "showSquare", type: "check", label: "Cell name in the card", fx: "render" },
     { key: "animate", type: "check", label: "Animations", fx: "panel" },
-    { key: "cursorTrail", type: "check", label: "Cursor trail", fx: "panel" },
+    { key: "cursorTrail", type: "check", label: "Cursor trail", fx: "panel", desktop: true },
   ]],
   ["panel", "Panel", [
-    { key: "corner", type: "select", label: "Position", opts: CORNERS, fx: "panel" },
+    { key: "corner", type: "select", label: "Position", opts: CORNERS, fx: "panel", desktop: true },
     { key: "side", type: "select", label: "I play", opts: [["auto", "Auto-detect"], ["w", "White"], ["b", "Black"], ["turn", "Whoever is to move"]], fx: "query" },
-    { key: "hotkey", type: "check", label: "Alt+X turns StockCrab on/off", fx: "panel" },
-    { key: "showHud", type: "check", label: "HUD with the active features", fx: "panel" },
-    { key: "hudCorner", type: "select", label: "HUD position", opts: CORNERS, fx: "panel", when: (s) => s.showHud },
+    { key: "hotkey", type: "check", label: "Alt+X turns it on and off", fx: "panel", desktop: true },
+    { key: "showHud", type: "check", label: "HUD", fx: "panel", desktop: true },
+    { key: "hudCorner", type: "select", label: "HUD position", opts: CORNERS, fx: "panel", when: (s) => s.showHud, desktop: true },
     { key: "checkUpdates", type: "check", label: "Check for updates", fx: "panel" },
     { key: "_update", type: "update" },
   ]],
 ];
+// the light build leaves out what a phone has no use for
+if (MOBILE) for (const sec of SECTIONS) sec[2] = sec[2].filter((c) => !c.desktop);
 const CONTROLS = SECTIONS.flatMap(([, , list]) => list);
 const QUERY_KEYS = CONTROLS.filter((c) => c.fx === "query" || c.fx === "engine").map((c) => c.key);
 
@@ -267,7 +269,6 @@ const PANEL_CSS = `
   * { box-sizing: border-box; }
   .box {
     --bg: #ffffff; --fg: #22252a; --muted: #6b7280; --line: #e4e6ea; --soft: #f3f4f6;
-    --shine: color-mix(in srgb, var(--accent) 85%, #fff);
     position: fixed; z-index: 99999; width: 262px; padding: 10px 12px 10px;
     max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
     background: var(--bg); color: var(--fg); border: 1px solid var(--line); border-radius: 10px;
@@ -276,12 +277,12 @@ const PANEL_CSS = `
     font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;
   }
   .box.theme-dark {
-    --bg: #262421; --fg: #ececec; --muted: #9d9a95; --line: #3b3835; --soft: #312e2b; --shine: color-mix(in srgb, #fff 80%, var(--accent));
+    --bg: #262421; --fg: #ececec; --muted: #9d9a95; --line: #3b3835; --soft: #312e2b;
     box-shadow: 0 8px 28px rgba(0, 0, 0, .5); color-scheme: dark;
   }
   @media (prefers-color-scheme: dark) {
     .box.theme-auto {
-      --bg: #262421; --fg: #ececec; --muted: #9d9a95; --line: #3b3835; --soft: #312e2b; --shine: color-mix(in srgb, #fff 80%, var(--accent));
+      --bg: #262421; --fg: #ececec; --muted: #9d9a95; --line: #3b3835; --soft: #312e2b;
       box-shadow: 0 8px 28px rgba(0, 0, 0, .5); color-scheme: dark;
     }
   }
@@ -289,7 +290,6 @@ const PANEL_CSS = `
   .c-tr { right: 12px; top: 12px; } .c-tl { left: 12px; top: 12px; }
 
   .hud {
-    --h1: color-mix(in srgb, var(--accent) 70%, #fff); --h2: var(--accent); --h3: color-mix(in srgb, var(--accent) 45%, #fff);
     position: fixed; z-index: 99998; display: flex; flex-direction: column; align-items: flex-start;
     pointer-events: none; font: 600 13px/1.3 "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; letter-spacing: -.005em;
   }
@@ -301,23 +301,15 @@ const PANEL_CSS = `
   .hud.beside.h-tr, .hud.beside.h-br { right: 286px; }
   .hud .hl {
     padding: 1px 6px 1px 5px; background: rgba(12, 10, 10, .62); border-left: 2px solid currentColor;
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, .75); white-space: nowrap; animation: hudwave 2.6s linear infinite;
+    color: var(--accent); text-shadow: 1px 1px 0 rgba(0, 0, 0, .75); white-space: nowrap;
   }
   .hud.h-tr .hl, .hud.h-br .hl { border-left: 0; border-right: 2px solid currentColor; padding: 1px 5px 1px 6px; }
   .hud .hl span { margin-left: 3px; color: #c9c3bd; }
-  .hud.still .hl { animation: none; color: var(--h2); }
-  @keyframes hudwave { 0%, 100% { color: var(--h1); } 33% { color: var(--h2); } 66% { color: var(--h3); } }
 
   .head { display: flex; align-items: center; gap: 8px; }
   .logo { display: flex; flex: none; } .logo svg { width: 24px; height: 24px; }
   .name { flex: 1; min-width: 0; }
-  .title {
-    display: inline-block; font-size: 14px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; color: var(--fg);
-    background: linear-gradient(105deg, var(--fg) 0 38%, var(--shine) 50%, var(--fg) 62% 100%) 100% 0 / 300% 100% no-repeat;
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .box.anim .title { animation: shine 5s ease-in-out infinite; }
-  @keyframes shine { 0%, 55% { background-position: 100% 0; } 85%, 100% { background-position: 0 0; } }
+  .title { font-size: 14px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; color: var(--fg); }
   .sub { font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sw { position: relative; width: 34px; height: 20px; flex: none; }
   .sw input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
@@ -374,6 +366,7 @@ const PANEL_CSS = `
   .pre .row { display: flex; gap: 6px; align-items: center; }
   .pre select, .pre input { flex: 1; width: 0; }
   .pre .row.small .btn { flex: 1; }
+  .btn.x { padding: 0; width: 24px; font-size: 14px; line-height: 1; color: var(--muted); }
   .pre-msg, .upd-msg { font-size: 11px; color: var(--muted); }
   .pre-msg:empty, .upd-msg:empty { display: none; }
   .ctl[hidden] { display: none; }
@@ -401,6 +394,7 @@ const PANEL_CSS = `
   .mv .dt { flex-basis: 100%; font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mv .tag { font-size: 9px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
   .mv .sc { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; white-space: nowrap; flex: none; }
+  .mv .sc:empty { display: none; }
 
   .status { margin-top: 8px; display: flex; align-items: center; gap: 7px; min-height: 16px; font-size: 11.5px; color: var(--muted); cursor: pointer; }
   .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--line); }
@@ -409,6 +403,34 @@ const PANEL_CSS = `
   .status[data-kind=err] { color: #d1242f; } .status[data-kind=err]::before { background: #d1242f; }
   .off .status, .off .moves, .collapsed .body { display: none; }
   @media (max-width: 640px) { .box { left: 8px !important; right: 8px !important; width: auto; max-height: 60vh; } }
+
+  /* the light build: a sheet along the bottom of the screen, sized for fingers */
+  .box.mobile {
+    left: 0 !important; right: 0 !important; top: auto !important; bottom: 0 !important; width: auto; max-height: 58vh;
+    border-radius: 14px 14px 0 0; border-width: 1px 0 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); font-size: 14px;
+  }
+  .mobile .logo svg { width: 28px; height: 28px; }
+  .mobile .title { font-size: 16px; }
+  .mobile .sub { font-size: 12px; }
+  .mobile .sw { width: 46px; height: 28px; }
+  .mobile .sw i::after { top: 4px; left: 4px; width: 20px; height: 20px; }
+  .mobile .sw input:checked + i::after { transform: translateX(18px); }
+  .mobile .fold { width: 36px; height: 36px; line-height: 36px; font-size: 18px; }
+  .mobile summary { font-size: 11.5px; padding: 8px 0; }
+  .mobile .grid { gap: 12px; }
+  .mobile .lab, .mobile .sel, .mobile .chk { font-size: 13.5px; }
+  .mobile input[type=range] { height: 28px; }
+  .mobile input[type=range]::-moz-range-thumb { width: 22px; height: 22px; }
+  .mobile input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; margin-top: -9px; }
+  .mobile .chk input { width: 20px; height: 20px; }
+  .mobile .field, .mobile .sel select, .mobile .pre select, .mobile .pre input, .mobile .btn { height: 34px; font-size: 13.5px; }
+  .mobile .sel select { max-width: 60%; }
+  .mobile .mv .san { font-size: 15px; }
+  .mobile .mv .co, .mobile .mv .dt { font-size: 11.5px; }
+  .mobile .status { font-size: 13px; min-height: 20px; }
+  .mobile.collapsed .mv:not(:first-child) { display: none; }
+  .mobile.collapsed .moves { margin-top: 6px; }
+  .mobile.collapsed .status { margin-top: 6px; }
 `;
 
 const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
@@ -433,16 +455,16 @@ function controlInner(c) {
   }
   if (c.type === "configs") {
     return `<div class="pre">
-      <div class="row"><select class="pre-list"></select><button class="btn main" data-act="apply">Apply</button><button class="btn" data-act="delete" title="Delete this config">Delete</button></div>
-      <div class="row"><input class="pre-name" maxlength="40" placeholder="Name for the current settings"><button class="btn" data-act="save">Save</button></div>
-      <div class="row small"><button class="btn" data-act="export">Save to file</button><button class="btn" data-act="import">Load from file</button></div>
+      <div class="row"><select class="pre-list"></select><button class="btn x" data-act="delete" title="Delete">×</button></div>
+      <div class="row"><input class="pre-name" maxlength="40" placeholder="Name"><button class="btn main" data-act="save">Save</button></div>
+      <div class="row small"><button class="btn" data-act="export">Export</button><button class="btn" data-act="import">Import</button></div>
       <input type="file" class="pre-file" accept=".json,application/json" hidden>
       <div class="pre-msg"></div>
     </div>`;
   }
   if (c.type === "uci") return `<div class="uci"></div>`;
   if (c.type === "update") {
-    return `<div class="upd"><span class="upd-text"></span><button class="btn" data-up="check">Check</button><button class="btn main" data-up="install" hidden>Update</button></div><div class="upd-msg"></div>`;
+    return `<div class="upd"><span class="upd-text"></span><button class="btn main" data-up="install" hidden>Update</button></div><div class="upd-msg"></div>`;
   }
   return `<label class="sel"><span>${c.label}</span><input type="color" data-key="${c.key}"></label>`;
 }
@@ -522,6 +544,7 @@ function mountPanel() {
       loadUciOptions();
     }
     if (c.fx === "render") rerender();
+    if (c.key === "checkUpdates") refreshUpdate(settings.checkUpdates);
     syncPanel();
     save();
   };
@@ -531,8 +554,10 @@ function mountPanel() {
   shadow.addEventListener("keydown", (e) => {
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName) && e.target.type !== "range" && e.target.type !== "checkbox") e.stopPropagation();
   });
+  // picking a config applies it
   shadow.querySelector(".pre-list").addEventListener("change", (e) => {
     configPick = e.target.value;
+    if (settings.presets[configPick]) onConfigAction("apply", shadow);
     syncConfigs(shadow);
   });
   shadow.querySelector(".pre-name").addEventListener("keydown", (e) => {
@@ -738,7 +763,7 @@ function syncPanel() {
   if (!r) return;
   r.host.style.setProperty("--accent", /^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : DEFAULTS.accent);
   const box = r.querySelector(".box");
-  box.className = `box c-${settings.corner} theme-${settings.theme || "auto"}` + (settings.enabled ? "" : " off") +
+  box.className = `box c-${settings.corner} theme-${settings.theme || "auto"}` + (MOBILE ? " mobile" : "") + (settings.enabled ? "" : " off") +
     (settings.collapsed ? " collapsed" : "") + (settings.showList ? "" : " no-list") + (settings.animate ? " anim" : "");
   r.querySelector(".fold").textContent = settings.collapsed ? "▸" : "▾";
   r.querySelector(".on").checked = settings.enabled;
@@ -775,7 +800,6 @@ function syncConfigs(r) {
   }
   list.value = configPick;
   list.disabled = !mine.length;
-  r.querySelector("[data-act=apply]").disabled = !mine.length;
   r.querySelector("[data-act=delete]").disabled = !mine.length;
 }
 
@@ -788,7 +812,7 @@ function hudRows(s) {
   const [model, build] = optText("model").split(" · ");
   const rows = [[model.replace(/\s+/g, ""), build ? build.replace(/^\w/, (c) => c.toUpperCase()) : ""]];
   if (searching(s)) {
-    rows.push(["Strength", s.strengthBy === "skill" ? `Skill ${s.skill}` : s.elo >= 3190 ? "Max" : `${s.elo} Elo`]);
+    rows.push(["Strength", s.strengthBy === "skill" ? `Skill ${s.skill}` : s.elo >= 3800 ? "Full" : `${s.elo} Elo`]);
     if (modelInfo(s).quick) rows.push(["Depth", String(s.quickDepth)]);
     else {
       rows.push(["ThinkTime", (s.movetime / 1000).toFixed(1) + "s"]);
@@ -805,7 +829,8 @@ function hudRows(s) {
   if (s.showWdl) rows.push(["WinDrawLoss", ""]);
   if (s.openingWhite) rows.push(["WhiteOpening", s.openingWhite]);
   if (s.openingBlack) rows.push(["BlackOpening", s.openingBlack]);
-  if (s.flowColours !== "off") rows.push(["FlowColours", s.flowColours === "duo" ? "Duo" : "Crab"]);
+  if (s.evalBar) rows.push(["EvalBar", ""]);
+  if (s.threat && searching(s)) rows.push(["Threat", ""]);
   if (s.blur) rows.push(["Blur", s.blur + "px"]);
   if (s.cursorTrail) rows.push(["CursorTrail", ""]);
   if (s.hotkey) rows.push(["Hotkey", "Alt+X"]);
@@ -818,17 +843,13 @@ function syncHud(r) {
   hud.hidden = !settings.showHud || !settings.enabled;
   if (hud.hidden) return;
   const corner = settings.hudCorner || "tl";
-  hud.className = `hud h-${corner}` + (corner === settings.corner && !settings.collapsed ? " beside" : "") + (settings.animate ? "" : " still");
+  hud.className = `hud h-${corner}` + (corner === settings.corner && !settings.collapsed ? " beside" : "");
   const html = hudRows(settings).map(([k, v]) => `<div class="hl">${esc(k)}${v ? `<span>[${esc(v)}]</span>` : ""}</div>`).join("");
   if (hud.dataset.html === html) return;
   hud.innerHTML = html;
   hud.dataset.html = html;
-  // widest line first, the colour wave runs down the list
-  const lines = [...hud.children].map((el) => [el, el.getBoundingClientRect().width]).sort((a, b) => b[1] - a[1]);
-  lines.forEach(([el], i) => {
-    el.style.animationDelay = (-i * 0.16).toFixed(2) + "s";
-    hud.appendChild(el);
-  });
+  // widest line first
+  [...hud.children].map((el) => [el, el.getBoundingClientRect().width]).sort((a, b) => b[1] - a[1]).forEach(([el]) => hud.appendChild(el));
 }
 
 function sendEngineChoice() {
@@ -841,6 +862,7 @@ function setEnabled(on) {
   settings.enabled = on;
   if (!on) {
     clearMarks(true);
+    clearEval();
     current = null;
     lastView = null;
     listMoves([]);

@@ -35,6 +35,41 @@ function sanish(fen, move, recapture) {
   return out;
 }
 
+// Sign that turns a score for the side to move of `fen` into the chosen point of view.
+const scoreSign = (fen) => (settings.scoresFor === "white" && fen && fen.split(" ")[1] === "b" ? -1 : 1);
+
+// The best line after a move, as short move names: "Nc6 Bb5 a6".
+function lineText(fen, pv, count) {
+  if (!fen || !pv || pv.length < 2 || !(count > 0)) return "";
+  const map = boardOf(fen);
+  let turn = fen.split(" ")[1];
+  const out = [];
+  for (let i = 0; i < pv.length && out.length < count; i++) {
+    if (i > 0) out.push(sanish(`${placementOf(map)} ${turn}`, pv[i]));
+    applyUci(map, pv[i]);
+    turn = turn === "w" ? "b" : "w";
+  }
+  return out.join(" ");
+}
+
+// The same position with the other side to move, to ask what they threaten; null when the side to move is in check.
+function threatFen(fen) {
+  const parts = fen.split(" ");
+  const map = boardOf(fen);
+  const white = parts[1] === "w";
+  const king = Object.keys(map).find((sq) => map[sq] === (white ? "K" : "k"));
+  if (!king || isAttacked(map, FILES.indexOf(king[0]), Number(king[1]), !white)) return null;
+  parts[1] = white ? "b" : "w";
+  parts[3] = "-";
+  return parts.join(" ");
+}
+
+// Mark for the opponent's threat.
+function threatMark(res, fen) {
+  if (!res || !res.move || res.move === "(none)") return null;
+  return { move: res.move, kind: "threat", san: sanish(threatFen(fen), res.move), label: "", detail: "" };
+}
+
 // Marks for our turn.
 function marksForMyTurn(res, others, fen) {
   const lines = res.lines || [];
@@ -44,8 +79,8 @@ function marksForMyTurn(res, others, fen) {
   const maia = !!res.maia;
   const make = (move, kind, line) => ({
     move, kind, san: sanish(fen, move),
-    label: !line ? "" : maia && settings.maiaShow === "share" && Number.isFinite(line.share) ? Math.round(line.share) + "%" : scoreText(line, 1),
-    detail: lineDetail(line, maia),
+    label: !line ? "" : maia && settings.maiaShow === "share" && Number.isFinite(line.share) ? Math.round(line.share) + "%" : scoreText(line, scoreSign(fen)),
+    detail: lineDetail(line, maia, fen),
   });
   const book = res.book && res.book.ok ? res.book : null;
   const marks = [make(res.move, "best", chosen)];
@@ -72,12 +107,14 @@ function marksForMyTurn(res, others, fen) {
   return marks;
 }
 
-// Detail row in the move list: share of players, win / draw / loss.
-function lineDetail(line, maia) {
+// Detail row in the move list: the line, share of players, win / draw / loss.
+function lineDetail(line, maia, fen) {
   if (!line) return "";
   const parts = [];
+  const next = lineText(fen, line.pv, settings.lineLength);
+  if (next) parts.push(next);
   if (maia && Number.isFinite(line.share)) parts.push(`${Math.round(line.share)}% of players`);
-  if (maia && settings.maiaShow === "share") parts.push(scoreText(line, 1));
+  if (maia && settings.maiaShow === "share") parts.push(scoreText(line, scoreSign(fen)));
   if (settings.showWdl && line.wdl) {
     const [w, d, l] = line.wdl.map((x) => Math.round(x / 10));
     parts.push(`W ${w}% · D ${d}% · L ${l}%`);
@@ -88,7 +125,8 @@ function lineDetail(line, maia) {
 // Marks for the opponent's turn (premove).
 function marksForPremove(res, fen) {
   if (!res.premove) return [];
-  const t = scoreText({ score: res.score, mate: res.mate }, 1);
+  // the reply's score is for us, and it is their turn in `fen`
+  const t = scoreText({ score: res.score, mate: res.mate }, settings.scoresFor === "white" && fen.split(" ")[1] === "w" ? -1 : 1);
   const recapture = !!res.expect && res.expect.slice(2, 4) === res.premove.slice(2, 4);
   const san = sanish(fen, res.premove, recapture);
   const mark = (detail) => [{ move: res.premove, kind: "premove", label: t, san, detail }];

@@ -13,6 +13,7 @@ function rerender() {
   const marks = lastView.mine
     ? marksForMyTurn(lastView.res, settings.others, lastView.fen)
     : marksForPremove(lastView.res, lastView.fen);
+  if (lastView.mine && lastView.threat && settings.threat) marks.push(lastView.threat);
   if (!marks.length) return;
   show(board, marks);
   if (lastView.mine) setStatus(bestStatus(marks, lastView.res), "ok");

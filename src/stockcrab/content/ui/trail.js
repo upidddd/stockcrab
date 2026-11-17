@@ -1,20 +1,10 @@
-// Cursor trail: small particles behind the mouse pointer.
+// Cursor trail: a thin ribbon behind the mouse pointer that narrows to its tail and pulls back when the mouse stops.
 
+const TRAIL_LIFE = 180; // ms a point stays in the ribbon
+const TRAIL_WIDTH = 4.4; // px at the pointer
 let trailCanvas = null;
-let trailParts = [];
+let trailPts = [];
 let trailFrame = 0;
-
-// A colour mixed with white.
-function mixWhite(hex, k) {
-  const n = parseInt(hex.slice(1), 16);
-  const f = (v) => Math.round(v + (255 - v) * k).toString(16).padStart(2, "0");
-  return "#" + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
-}
-
-function trailColours() {
-  const base = /^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : "#e4572e";
-  return settings.flowColours === "duo" ? [base, settings.colourPremove || "#00b8d4"] : [base, deepShade(base), mixWhite(base, 0.4)];
-}
 
 function trailSize() {
   const dpr = window.devicePixelRatio || 1;
@@ -23,25 +13,49 @@ function trailSize() {
   trailCanvas.getContext("2d").setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+// The ribbon as one filled outline: left edge forward, round head, right edge back.
 function trailStep(now) {
   const ctx = trailCanvas.getContext("2d");
   ctx.clearRect(0, 0, innerWidth, innerHeight);
-  trailParts = trailParts.filter((p) => now - p.born < p.life);
-  for (const p of trailParts) {
-    const t = (now - p.born) / p.life;
-    const dt = (now - p.last) / 16.7;
-    p.last = now;
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    p.vy += 0.03 * dt;
-    ctx.globalAlpha = (1 - t) * 0.9;
-    ctx.fillStyle = p.c;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r * (1 - t * 0.7), 0, Math.PI * 2);
-    ctx.fill();
+  trailPts = trailPts.filter((p) => now - p.t < TRAIL_LIFE);
+  const n = trailPts.length;
+  if (n < 2) {
+    trailPts = [];
+    trailFrame = 0;
+    return;
   }
-  trailFrame = trailParts.length ? requestAnimationFrame(trailStep) : 0;
-  if (!trailFrame) ctx.clearRect(0, 0, innerWidth, innerHeight);
+  const left = [];
+  const right = [];
+  for (let i = 0; i < n; i++) {
+    const p = trailPts[i];
+    const a = trailPts[Math.max(0, i - 1)];
+    const b = trailPts[Math.min(n - 1, i + 1)];
+    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const nx = -(b.y - a.y) / len;
+    const ny = (b.x - a.x) / len;
+    const life = 1 - (now - p.t) / TRAIL_LIFE;
+    const w = (TRAIL_WIDTH / 2) * Math.pow(life, 1.4) * (0.35 + 0.65 * (i / (n - 1)));
+    left.push([p.x + nx * w, p.y + ny * w]);
+    right.push([p.x - nx * w, p.y - ny * w]);
+  }
+  const head = trailPts[n - 1];
+  const headW = Math.hypot(left[n - 1][0] - head.x, left[n - 1][1] - head.y);
+  ctx.beginPath();
+  ctx.moveTo(trailPts[0].x, trailPts[0].y);
+  for (let i = 1; i < n; i++) ctx.quadraticCurveTo(left[i - 1][0], left[i - 1][1], (left[i - 1][0] + left[i][0]) / 2, (left[i - 1][1] + left[i][1]) / 2);
+  ctx.lineTo(left[n - 1][0], left[n - 1][1]);
+  const ang = Math.atan2(left[n - 1][1] - head.y, left[n - 1][0] - head.x);
+  ctx.arc(head.x, head.y, headW, ang, ang + Math.PI, true);
+  for (let i = n - 1; i > 0; i--) ctx.quadraticCurveTo(right[i][0], right[i][1], (right[i][0] + right[i - 1][0]) / 2, (right[i][1] + right[i - 1][1]) / 2);
+  ctx.closePath();
+  const tail = trailPts[0];
+  const grad = ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
+  const col = /^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : DEFAULTS.accent;
+  grad.addColorStop(0, col + "00");
+  grad.addColorStop(1, col + "e6");
+  ctx.fillStyle = grad;
+  ctx.fill();
+  trailFrame = requestAnimationFrame(trailStep);
 }
 
 addEventListener("pointermove", (e) => {
@@ -55,15 +69,12 @@ addEventListener("pointermove", (e) => {
     addEventListener("resize", trailSize);
   }
   const now = performance.now();
-  const cols = trailColours();
-  for (let i = 0; i < 2 && trailParts.length < 220; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const v = 0.3 + Math.random() * 0.9;
-    trailParts.push({
-      x: e.clientX, y: e.clientY, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 0.4,
-      r: 1.6 + Math.random() * 2.4, c: cols[(Math.random() * cols.length) | 0],
-      born: now, last: now, life: 450 + Math.random() * 400,
-    });
+  const events = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+  for (const ev of events.length ? events : [e]) {
+    const last = trailPts[trailPts.length - 1];
+    if (last && Math.hypot(ev.clientX - last.x, ev.clientY - last.y) < 2) continue;
+    trailPts.push({ x: ev.clientX, y: ev.clientY, t: now });
   }
+  if (trailPts.length > 64) trailPts.splice(0, trailPts.length - 64);
   if (!trailFrame) trailFrame = requestAnimationFrame(trailStep);
 }, { passive: true, capture: true });

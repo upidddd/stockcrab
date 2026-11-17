@@ -1,20 +1,22 @@
 // Engine models and the state of the running engine.
 
 // elo: UCI_Elo range; noElo: strength via Skill Level only; nnue: has "Use NNUE"; maia: no search, plays like people;
-// quick: a fixed shallow depth instead of a think time (fast, weaker)
+// quick: a fixed shallow depth instead of a think time (fast, weaker); mobile: part of the light build
 const MODELS = {
   "sf19-full": { name: "Stockfish 19 Full", file: "engine/stockfish-19-single.js", bootMs: 60000, maxHash: 256, elo: [1320, 3190] },
-  "sf19-lite": { name: "Stockfish 19 Lite", file: "engine/stockfish-19-lite-single.js", bootMs: 25000, maxHash: 256, elo: [1320, 3190] },
-  "sf19-quick": { name: "Stockfish 19 Quick", file: "engine/stockfish-19-lite-single.js", bootMs: 25000, maxHash: 256, elo: [1320, 3190], quick: true },
+  "sf19-lite": { name: "Stockfish 19 Lite", file: "engine/stockfish-19-lite-single.js", bootMs: 25000, maxHash: 256, elo: [1320, 3190], mobile: true },
+  "sf19-quick": { name: "Stockfish 19 Quick", file: "engine/stockfish-19-lite-single.js", bootMs: 25000, maxHash: 256, elo: [1320, 3190], quick: true, mobile: true },
   "sf17-full": { name: "Stockfish 17.1 Full", file: "engine/sf17/stockfish-17.1-single-a496a04.js", bootMs: 60000, maxHash: 256, elo: [1320, 3190] },
   "sf17-lite": { name: "Stockfish 17.1 Lite", file: "engine/sf17/stockfish-17.1-lite-single-03e3232.js", bootMs: 25000, maxHash: 256, elo: [1320, 3190] },
   "sf11": { name: "Stockfish 11 Classic", file: "engine/sf11/stockfish.js", bootMs: 20000, maxHash: 64, noElo: true },
-  "sf19-asm": { name: "Stockfish 19 JavaScript", file: "engine/stockfish-19-asm.js", bootMs: 30000, maxHash: 32, elo: [1320, 3190] },
+  "sf19-asm": { name: "Stockfish 19 JavaScript", file: "engine/stockfish-19-asm.js", bootMs: 30000, maxHash: 32, elo: [1320, 3190], mobile: true },
   "fairy": { name: "Fairy-Stockfish", file: "engine/fairy/fairy-stockfish.js", bootMs: 60000, maxHash: 256, elo: [500, 2850], nnue: true },
   "maia3": { name: "Maia 3", file: "engine/maia/maia-uci.js", bootMs: 60000, maxHash: 256, elo: [600, 2600], maia: true },
 };
-const DEFAULT_MODEL = "sf19-full";
-const FALLBACKS = ["sf19-full", "sf19-lite"]; // if the chosen model does not start
+// the light build ships only the small engines
+if (BUILD === "mobile") for (const id of Object.keys(MODELS)) if (!MODELS[id].mobile) delete MODELS[id];
+const DEFAULT_MODEL = BUILD === "mobile" ? "sf19-lite" : "sf19-full";
+const FALLBACKS = BUILD === "mobile" ? ["sf19-lite", "sf19-asm"] : ["sf19-full", "sf19-lite"]; // if the chosen model does not start
 const bootMs = () => globalThis.__BOOT_MS ?? MODELS[modelId].bootMs;
 let requested = DEFAULT_MODEL;
 let modelId = DEFAULT_MODEL; // running model (differs after a fallback)

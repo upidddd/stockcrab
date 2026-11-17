@@ -29,6 +29,7 @@ async function tick() {
   if (!settings.enabled) {
     if (lastKey !== null) {
       clearMarks(true);
+      clearEval();
       current = null;
       lastView = null;
       listMoves([]);
@@ -38,6 +39,7 @@ async function tick() {
   }
 
   const board = getBoard();
+  placeEval(board);
   if (!board) {
     setStatus("Board not found");
     return;
@@ -186,6 +188,27 @@ async function tick() {
   }
   lastView = { mine, res, fen };
   const marks = marksForMyTurn(res, settings.others, fen);
+  setEval((res.lines || [])[0] || res.chosen, fen);
+  placeEval(board);
   show(board, marks, true);
   setStatus(bestStatus(marks, res), "ok");
+  if (settings.threat && searching(settings)) showThreat(board, fen, id);
+}
+
+// The opponent's threat: a short full-strength search of the same position with them to move.
+async function showThreat(board, fen, id) {
+  const tfen = threatFen(fen);
+  if (!tfen) return;
+  let res = null;
+  try {
+    res = await browser.runtime.sendMessage({
+      type: "hint", id, fen: tfen, elo: 3800, movetime: Math.min(1500, Math.max(400, Math.round(settings.movetime / 4))),
+      multipv: 1, aggression: 0, hash: settings.hash, nnue: settings.useNnue, uci: (settings.uci || {})[settings.model],
+    });
+  } catch (e) {}
+  if (!res || res.id !== requestId || !lastView || lastView.fen !== fen || !settings.threat) return;
+  const mark = threatMark(res, fen);
+  if (!mark) return;
+  lastView.threat = mark;
+  show(board, [...marksForMyTurn(lastView.res, settings.others, fen), mark]);
 }

@@ -1,16 +1,17 @@
 // Default settings, loop state, saving.
 
+const MOBILE = BUILD === "mobile";
 const DEFAULTS = {
   enabled: false,
-  collapsed: false,
+  collapsed: MOBILE, // on a phone the panel starts as a strip under the board
   // engine
-  elo: 3190,
-  movetime: 6000,
+  elo: 3800, // 200 – 3800, 3800 = full strength
+  movetime: MOBILE ? 3000 : 6000,
   depth: 0, // 0 = no limit
   aggression: 0,
-  hash: 128,
+  hash: MOBILE ? 32 : 128,
   side: "auto", // "auto", "w", "b" or "turn" (whoever is to move)
-  model: "sf19-full",
+  model: MOBILE ? "sf19-lite" : "sf19-full",
   strengthBy: "elo", // "elo" or "skill"
   skill: 20, // Skill Level 0..20
   nodes: 0, // thousands of nodes, 0 = no limit
@@ -26,10 +27,15 @@ const DEFAULTS = {
   uci: {}, // the user's own engine options: model -> { option: value }
   bookMaxLoss: 150, // cp behind the engine's move; 500 = never leave the book
   // moves
-  others: 2, // extra moves next to the best one
+  others: MOBILE ? 1 : 2, // extra moves next to the best one
   goodWithin: 50, // cp behind the best
   scoreUnits: "pawns",
   showList: true,
+  lineLength: 4, // moves of the best line in the list, 0 = off
+  scoresFor: "mover", // "mover" (the side to move) or "white"
+  evalBar: true,
+  threat: false, // the opponent's threat: their best move if it were their turn
+  colourThreat: "#3b82f6",
   // premove
   premove: true,
   premoveMode: "smart", // "smart", "likely" or "safe"
@@ -48,14 +54,12 @@ const DEFAULTS = {
   colourOutline: "#e4572e",
   lineWidth: 100,
   opacity: 70,
-  blur: 4, // px, 0 = off
+  blur: MOBILE ? 0 : 4, // px, 0 = off
   showOutline: true,
   showHead: true,
   showLabels: true,
-  showSquare: false,
-  version: 3, // for migrations
+  version: 4, // for migrations
   animate: true,
-  flowColours: "crab", // "crab", "duo" or "off"
   // panel
   theme: "auto", // "auto", "light" or "dark"
   accent: "#e4572e", // panel, HUD and cursor trail
@@ -65,7 +69,7 @@ const DEFAULTS = {
   showHud: false,
   hudCorner: "tl",
   checkUpdates: true,
-  sections: { configs: false, engine: true, uci: false, moves: false, opening: false, premove: false, look: false, panel: false },
+  sections: { configs: false, engine: !MOBILE, uci: false, moves: false, analysis: false, opening: false, premove: false, look: false, panel: false },
   presets: {}, // saved configs: name -> settings
 };
 let settings = JSON.parse(JSON.stringify(DEFAULTS));

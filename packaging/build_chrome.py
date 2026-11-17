@@ -3,18 +3,22 @@
 
 The Firefox manifest (src/stockcrab/manifest.json) is the source of truth: the Chrome manifest and the offscreen
 document are generated from it, so both versions always load the same scripts in the same order.
---test-origin http://127.0.0.1:8000/* also runs the content scripts on that origin (for local tests only)."""
+--test-origin http://127.0.0.1:8000/* also runs the content scripts on that origin (for local tests only).
+--src, --out and --zip-name build another source folder (packaging/build_mobile.py uses them for the light build)."""
 import argparse, json, os, shutil, sys, zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC = os.path.join(ROOT, "src", "stockcrab")
 PLATFORM = os.path.join(ROOT, "platforms", "chrome")
-OUT = os.path.join(ROOT, "dist", "chrome")
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--test-origin", action="append", default=[])
 ap.add_argument("--no-zip", action="store_true")
+ap.add_argument("--src", default=os.path.join(ROOT, "src", "stockcrab"))
+ap.add_argument("--out", default=os.path.join(ROOT, "dist", "chrome"))
+ap.add_argument("--zip-name", default="stockcrab-chrome")
 args = ap.parse_args()
+SRC = os.path.abspath(args.src)
+OUT = os.path.abspath(args.out)
 
 ff = json.load(open(os.path.join(SRC, "manifest.json"), encoding="utf-8"))
 shutil.rmtree(OUT, ignore_errors=True)
@@ -60,7 +64,7 @@ if missing:
 
 print(f"{OUT}  (Chrome: chrome://extensions -> Developer mode -> Load unpacked)")
 if not args.no_zip and not args.test_origin:
-    out = os.path.join(ROOT, "dist", f"stockcrab-chrome-{ff['version']}.zip")
+    out = os.path.join(ROOT, "dist", f"{args.zip_name}-{ff['version']}.zip")
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         for dirpath, dirs, files in os.walk(OUT):
             dirs.sort()

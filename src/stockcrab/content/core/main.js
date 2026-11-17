@@ -12,6 +12,11 @@ try {
       if ((saved.version || 1) < 3 && saved.opacity === 90) delete saved.opacity;
       if ((saved.version || 1) < 2) delete saved.showSquare;
       if (saved.colourPremove === "#d62828") delete saved.colourPremove;
+      // 0.2: one Elo scale 200 – 3800; the old top (3190) meant full strength, below a model's range it played at its lowest
+      if ((saved.version || 1) < 4 && Number.isFinite(saved.elo)) {
+        if (saved.elo >= 3190) saved.elo = 3800;
+        else if (saved.elo < 1320 && saved.model !== "fairy") saved.elo = 1320;
+      }
       Object.assign(settings, saved, { enabled: false });
       settings.version = DEFAULTS.version;
       settings.sections = { ...DEFAULTS.sections, ...(r.stockcrab.sections || {}) };

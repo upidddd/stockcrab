@@ -27,7 +27,7 @@ const svgEl = (name, attrs) => {
   return el;
 };
 
-const colourOf = (kind) => ({ best: settings.colourBest, alt: settings.colourAlt, premove: settings.colourPremove })[kind];
+const colourOf = (kind) => ({ best: settings.colourBest, alt: settings.colourAlt, premove: settings.colourPremove, threat: settings.colourThreat })[kind];
 
 function squareRect(board, sq, boardRect) {
   if (SITE === "lichess") {
@@ -82,17 +82,7 @@ function textOn(hex) {
   return L > 0.34 ? "#1b1b1b" : "#fff";
 }
 
-// Darker shade for the gradient.
-function deepShade(hex) {
-  if (/^#e4572e$/i.test(hex)) return "#a8341a";
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
-  if (!m) return hex;
-  const n = parseInt(m[1], 16);
-  const f = (v) => Math.round(v * 0.68).toString(16).padStart(2, "0");
-  return "#" + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
-}
 const PROMOTION = { q: "= Queen", r: "= Rook", b: "= Bishop", n: "= Knight" };
-let flowCounter = 0;
 
 // Draws all hints as one SVG over the board.
 function drawMarks(board, marks, animate = false) {
@@ -103,25 +93,6 @@ function drawMarks(board, marks, animate = false) {
   if (getComputedStyle(board).position === "static") board.style.position = "relative";
   const br = board.getBoundingClientRect();
   const svg = svgEl("svg", { class: MARK, width: br.width, height: br.height, viewBox: `0 0 ${br.width} ${br.height}` });
-  // Flowing gradient for a colour.
-  const defs = svgEl("defs", {});
-  svg.appendChild(defs);
-  const flowId = ++flowCounter;
-  const paints = {};
-  const paint = (col) => {
-    const mode = settings.flowColours === true ? "crab" : settings.flowColours;
-    if (!mode || mode === "off") return col;
-    if (paints[col]) return paints[col];
-    const id = `stockcrab-flow-${flowId}-${Object.keys(paints).length}`;
-    const span = (br.width / 8) * 1.1;
-    const g = svgEl("linearGradient", { id, gradientUnits: "userSpaceOnUse", x1: 0, y1: 0, x2: span, y2: span, spreadMethod: "reflect" });
-    g.appendChild(svgEl("stop", { offset: 0, "stop-color": col }));
-    const other = mode === "duo" ? (col.toLowerCase() === String(settings.colourPremove).toLowerCase() ? settings.colourBest : settings.colourPremove) : deepShade(col);
-    g.appendChild(svgEl("stop", { offset: 1, "stop-color": other }));
-    g.appendChild(svgEl("animateTransform", { attributeName: "gradientTransform", type: "translate", from: "0 0", to: `${2 * span} ${2 * span}`, dur: "2.6s", repeatCount: "indefinite" }));
-    defs.appendChild(g);
-    return (paints[col] = `url(#${id})`);
-  };
   svg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:20;overflow:visible";
   const k = settings.lineWidth / 100;
   const infos = [];
@@ -151,18 +122,19 @@ function drawMarks(board, marks, animate = false) {
     if (!from.w || !to.w) continue;
     const col = colourOf(m.kind);
     const sq = from.w;
-    const alt = m.kind === "alt";
+    const threat = m.kind === "threat";
+    const alt = m.kind === "alt" || threat;
     const op = (alt ? 0.68 : 1) * (settings.opacity / 100);
     // outlines and arrow of one move in one group
     const shape = svgEl("g", { opacity: op });
     svg.appendChild(shape);
 
-    if (settings.showOutline) {
+    if (settings.showOutline && !threat) {
       const ow = sq * 0.04 * k;
       for (const r of [from, to]) {
         const outline = svgEl("rect", {
           x: r.x + ow / 2, y: r.y + ow / 2, width: r.w - ow, height: r.h - ow,
-          fill: "none", stroke: paint(m.kind === "premove" ? settings.colourPremove : settings.colourOutline), "stroke-width": ow, "stroke-linejoin": "miter",
+          fill: "none", stroke: m.kind === "premove" ? settings.colourPremove : settings.colourOutline, "stroke-width": ow, "stroke-linejoin": "miter",
         });
         shape.appendChild(outline);
         if (anim) animateIn(outline, [{ opacity: 0 }, { opacity: 1 }], 0, 160);
@@ -196,10 +168,12 @@ function drawMarks(board, marks, animate = false) {
       const pts = [...path.slice(0, -1), end];
       const line = svgEl("polyline", {
         points: pts.map((p) => `${p.x},${p.y}`).join(" "), fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round",
-        stroke: paint(col), "stroke-width": lw,
+        stroke: col, "stroke-width": lw,
       });
+      // the threat is dashed: it is not a move to play
+      if (threat) line.setAttribute("stroke-dasharray", `${lw * 1.6} ${lw * 1.4}`);
       shape.appendChild(line);
-      if (anim) {
+      if (anim && !threat) {
         let L = 0;
         for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
         animateIn(line, [{ strokeDasharray: `${L}`, strokeDashoffset: L }, { strokeDasharray: `${L}`, strokeDashoffset: 0 }], 0, 200);
@@ -208,7 +182,7 @@ function drawMarks(board, marks, animate = false) {
         const tip = { x: tc.x - ux * sq * 0.03, y: tc.y - uy * sq * 0.03 };
         const headEl = svgEl("polygon", {
           points: `${tip.x},${tip.y} ${bx - uy * hw},${by + ux * hw} ${bx + uy * hw},${by - ux * hw}`,
-          fill: paint(col), stroke: paint(col), "stroke-width": sq * 0.025, "stroke-linejoin": "round",
+          fill: col, stroke: col, "stroke-width": sq * 0.025, "stroke-linejoin": "round",
         });
         shape.appendChild(headEl);
         if (anim) animateIn(headEl, [{ opacity: 0, transform: "scale(0.5)", transformOrigin: `${tip.x}px ${tip.y}px` }, { transform: "scale(1)", transformOrigin: `${tip.x}px ${tip.y}px` }], 120, 150);
@@ -243,7 +217,7 @@ function drawMarks(board, marks, animate = false) {
 
     // card on the target cell
     const score = settings.showLabels && m.label ? m.label : "";
-    const words = [PROMOTION[m.move[4]], settings.showSquare && m.move.slice(2, 4), m.kind === "premove" && "premove"].filter(Boolean).join(" · ");
+    const words = threat ? "" : [PROMOTION[m.move[4]], m.kind === "premove" && "premove"].filter(Boolean).join(" · ");
     const info = { to, sq, op, card: null };
     if (score || words) {
       const text = (str, fs, weight, extra = "") => {
@@ -254,7 +228,7 @@ function drawMarks(board, marks, animate = false) {
         t.textContent = str;
         return t;
       };
-      const card = svgEl("rect", { fill: textOn(col) === "#fff" && settings.flowColours !== "duo" ? paint(col) : col, opacity: Math.min(1, op + 0.05) });
+      const card = svgEl("rect", { fill: col, opacity: Math.min(1, op + 0.05) });
       const t1 = score ? text(score, sq * (alt ? 0.125 : 0.14), 700) : null;
       const t2 = words ? text(words, sq * 0.09, 500, "opacity:.92") : null;
       svg.appendChild(card);

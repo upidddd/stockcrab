@@ -18,6 +18,7 @@ for size, path in manifest.get("icons", {}).items():
 for path in manifest["background"]["scripts"]:
     need(path, "background script")
     listed.append(path)
+need("build.js", "build flag")
 for cs in manifest["content_scripts"]:
     for path in cs["js"]:
         need(path, "content script")
@@ -34,8 +35,10 @@ for folder in ("background", "content", "data"):
             rel = os.path.relpath(os.path.join(dirpath, f), EXT).replace(os.sep, "/")
             if f.endswith(".js") and rel not in listed:
                 problems.append(f"{rel} is not listed in manifest.json")
-if len(listed) != len(set(listed)):
-    problems.append("a script is listed twice in manifest.json")
+# a script may be shared by the content scripts and the background (build.js), but is listed once in each
+for group in [manifest["background"]["scripts"]] + [cs["js"] for cs in manifest["content_scripts"]]:
+    if len(group) != len(set(group)):
+        problems.append("a script is listed twice in manifest.json")
 
 # engine files exist
 models = open(os.path.join(EXT, "background", "engine", "models.js"), encoding="utf-8").read()

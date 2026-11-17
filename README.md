@@ -17,7 +17,7 @@ Best move, other good moves with a score for each, and a premove while your oppo
 [![License](https://img.shields.io/badge/license-GPL--3.0-e4572e?style=flat-square&labelColor=262421)](LICENSE)
 [![Privacy](https://img.shields.io/badge/network-update%20check%20only-e4572e?style=flat-square&labelColor=262421)](#privacy)
 
-[**Install**](#install) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Premoves](#premoves) &nbsp;·&nbsp; [Settings](#settings) &nbsp;·&nbsp; [Fair play](#fair-play) &nbsp;·&nbsp; [Intro video](docs/intro.mp4)
+[**Install**](#install) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Strength](#strength) &nbsp;·&nbsp; [Premoves](#premoves) &nbsp;·&nbsp; [Settings](#settings) &nbsp;·&nbsp; [Fair play](#fair-play) &nbsp;·&nbsp; [Intro video](docs/intro.mp4)
 
 [Русская версия](README.ru.md)
 
@@ -38,18 +38,18 @@ Best move, other good moves with a score for each, and a premove while your oppo
 
 ## Features
 
-- **Hints on the board.** An arrow (a knight's bends like an L) and outlined squares for the best move, a compact card on the target square with its score, plus up to three other good moves, drawn thinner. The colours slowly flow (orange and the crab's red, or orange and cyan, or off), a promotion says which piece (*= Queen*), and there is an optional blur under the arrows.
+- **Hints on the board.** An arrow (a knight's bends like an L) and outlined squares for the best move, its score on the target square, and up to three other good moves drawn thinner. A promotion says which piece (*= Queen*); an optional blur sits under the arrows.
+- **Strength from 200 to 3800 Elo.** One scale for every Stockfish model. Inside the engine's own range it limits itself; below it the move is picked among the engine's lines, and the lower the Elo the more often a worse one; above it the engine plays at full strength within a search budget that grows with the Elo, and 3800 has no budget at all ([how](#strength)).
+- **Analysis.** An evaluation bar beside the board, the best line after every move in the list, and the opponent's threat (the move they would play if it were their turn) as a dashed arrow.
 - **Premoves.** While your opponent thinks, StockCrab can show the reply worth premoving, in three styles, including a rule-based pawn retake ([how](#premoves)).
-- **You choose the opponent.** Strength by Elo or Skill level, think time, depth and node limits, hash size, win / draw / loss, and an optional aggression slider (it gives up a little strength for sharper play). The panel shows only what the chosen model uses.
 - **Openings and gambits.** Pick an opening for White and for Black from 3,865 book lines (every named opening and gambit, or just *Gambits*): the hints follow it while the game stays in the book and the move is not much worse, then the engine takes over.
 - **Every engine option.** Besides the main controls, *Engine options* lists everything the chosen engine offers (Move Overhead, nodestime, Contempt, Maia's mate search…) with your own values per model.
-- **Configs.** Save all your settings under a name, apply them, save them to a `.json` file and load them back.
-- **HUD, colours and cursor trail.** An optional list of every feature that is on, in any corner; a light or dark panel and your own accent colour; an optional particle trail behind the mouse.
-- **Updates.** The panel says when a new version is out; the Firefox build updates itself from the GitHub release.
+- **Configs.** Save all your settings under a name, switch between them, export one to a `.json` file and import it back.
+- **StockCrab Lite for phones.** A light build of about 3 MB with the small engines and a panel along the bottom of the screen, sized for fingers ([install](#phones-stockcrab-lite)).
 - **Nine engines.** Stockfish 19 (Full, Lite, Quick, JavaScript), Stockfish 17.1 (Full, Lite), Stockfish 11 classic, Fairy-Stockfish and Maia 3, a network that plays like people of a given rating. If one does not start, another takes over ([engines](#engines)).
-- **Honest numbers.** Only exact scores are used, lines come from the last *complete* depth, and a move never borrows the score of another move.
-- **Works on both sites.** chess.com and lichess, including analysis boards and puzzles (set *I play: Whoever is to move*).
-- **A panel that stays out of the way.** Flat and compact, light and dark theme, brand orange, `Alt+X` to switch on and off, four corners to dock to; everything can be set while StockCrab is off.
+- **Both sites.** chess.com and lichess, including analysis boards and puzzles (set *I play: Whoever is to move*).
+- **The panel.** Light or dark, your own accent colour, `Alt+X` to switch on and off, any of four corners; an optional HUD with the active features and a cursor trail.
+- **Updates.** The panel says when a new version is out; the Firefox builds update themselves from the GitHub release.
 - **Private.** The engine runs inside your browser. No servers, no accounts, no tracking; the only request is the optional update check ([privacy](#privacy)).
 
 ## Install
@@ -72,6 +72,13 @@ Temporary add-ons are removed when Firefox closes. For a permanent install use F
 3. Click **Load unpacked** and choose the unzipped folder (or `dist/chrome`). Chrome 116 or newer.
 
 It is the same code as the Firefox version. Chrome's background is a service worker, which cannot start the engine's Web Worker, so on Chrome the engine runs in an offscreen document ([how](docs/architecture.md#chrome)).
+
+### Phones (StockCrab Lite)
+
+The light build is in [Releases](https://github.com/upidddd/stockcrab/releases): `stockcrab-lite-<version>.xpi` for Firefox, `stockcrab-lite-chrome-<version>.zip` for Chromium browsers that load extensions. It has Stockfish 19 Lite, Quick and JavaScript only, starts with the panel folded into a strip under the board (tap ▸ for the settings) and installs next to the full version. Build it yourself with `python3 packaging/build_mobile.py --chrome`.
+
+- **Firefox for Android** (Nightly or Beta): *Settings → About*, tap the Firefox logo five times to unlock the debug menu, set `xpinstall.signatures.required` to `false` in `about:config`, then *Settings → Install extension from file* and pick the `.xpi`. It updates itself from the releases like the desktop build.
+- **Chromium browsers with extensions** (Lemur, Quetta and similar): unzip the `.zip`, open the browser's extensions page, switch on developer mode and load the folder.
 
 ### First start
 
@@ -100,14 +107,28 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 
 | Section | What you can set |
 |---|---|
-| **Configs** | your own sets of all settings: save under a name, apply, delete, save to a file, load from a file |
-| **Engine** | model; strength by Elo (500 … max, within what the model allows) or by Skill level (0 – 20), think time (0.5 – 30 s), depth and node limits, aggression, hash (16 – 256 MB), win / draw / loss; NNUE or classical evaluation for Fairy-Stockfish; for Maia: players' and opponent's rating, what the card shows. Only the settings the chosen model uses are shown |
+| **Configs** | your own sets of all settings: save under a name, pick one to apply it, delete, export to a file, import from a file |
+| **Engine** | model; strength by Elo (200 – 3800 on every Stockfish model, [how](#strength)) or by Skill level (0 – 20), think time (0.5 – 30 s), depth and node limits, aggression, hash (16 – 256 MB), win / draw / loss; NNUE or classical evaluation for Fairy-Stockfish; for Maia: players' and opponent's rating, what the card shows. Only the settings the chosen model uses are shown |
 | **Engine options** | every option the chosen engine reports (e.g. Move Overhead, nodestime, Ponder, UCI_Chess960; Contempt for Stockfish 11; Maia's mate search depth and time), with a reset |
-| **Moves** | how many other good moves (0 – 3) and how far behind they may be (for Maia: how many players play them), score units, the move list in the panel |
+| **Moves** | how many other good moves (0 – 3) and how far behind they may be (for Maia: how many players play them), score units, scores for the side to move or for White, the move list in the panel |
+| **Analysis** | the evaluation bar, how many moves of the best line the list shows (0 – 10), the opponent's threat and its colour |
 | **Opening** | an opening for White and for Black (a name with its variations, *Any book line* or *Gambits*), how much worse than the engine's move a book move may be |
 | **Premove** | on or off, style, how sure the style has to be, how many likely replies are checked and for how long |
-| **Look** | panel theme, accent colour, hint colours, cursor trail, flowing colours, line width, opacity, blur under the hints, outline, arrow head, score, cell name, animations |
+| **Look** | panel theme, accent colour, hint colours, line width, opacity, blur under the hints, outline, arrow head, score on the board, animations, cursor trail |
 | **Panel** | corner, which side I play, the `Alt+X` hotkey, the HUD and its corner, update check |
+
+## Strength
+
+The *Strength (Elo)* slider goes from 200 to 3800 on every Stockfish model, and every step of it changes how the engine plays:
+
+| Elo | What the engine does |
+|---|---|
+| below the model's own range (under 1320 for Stockfish, 500 for Fairy-Stockfish) | plays at its lowest Elo with eight lines, then picks one of them: each line is weighted by how much of the expected score it gives away, and the lower the Elo, the more often a worse line wins. The same position at the same Elo always gets the same move |
+| inside the model's range | the engine's own `UCI_Elo` limit |
+| from the top of the range to 3799 | full strength within a node budget: 40 thousand nodes at the top of the range, growing to 4 million just under 3800 (the smaller of this and *Max nodes* is used) |
+| 3800 | full strength, no budget |
+
+Stockfish 11 has no `UCI_Elo`, so inside the range its Elo is mapped onto *Skill Level*. Maia keeps its own rating (600 – 2600). Premoves and the threat are always searched at full strength.
 
 ## Engines
 
@@ -129,7 +150,7 @@ The Stockfish models are builds of [stockfish.js](https://github.com/nmrugg/stoc
 ```
  chess.com / lichess page                      background (event page)
 ┌────────────────────────────┐   messages    ┌─────────────────────────────┐
-│ content/  (20 scripts)     │ ────────────▶ │ background/  (10 scripts)   │
+│ content/  (19 scripts)     │ ────────────▶ │ background/  (14 scripts)   │
 │  · reads the board         │               │  · queue of searches        │
 │  · draws arrows, cards     │ ◀──────────── │  · Worker: Stockfish (WASM) │
 │  · the panel (shadow DOM)  │   lines, score│  · UCI MultiPV, searchmoves │
@@ -157,7 +178,7 @@ src/stockcrab/       the extension: this folder is what Firefox loads
   engine/            the engine builds (Stockfish, Fairy-Stockfish, Maia 3) and their licences
   assets/            the extension's icon, the opening book (openings.json)
 docs/                banner, screenshots, the intro video, architecture notes
-packaging/           build_xpi.py (Firefox .xpi), build_chrome.py (Chrome folder and .zip)
+packaging/           build_xpi.py (Firefox .xpi), build_chrome.py (Chrome folder and .zip), build_mobile.py (StockCrab Lite)
 platforms/chrome/    the Chrome glue: service worker, offscreen engine host, API shims
 tools/               check.py checks the manifest and the scripts; fairy-stockfish/ builds Fairy-Stockfish; openings/ builds the opening book
 .github/workflows/   builds both packages on every push and attaches them to a release
@@ -175,10 +196,13 @@ tools/               check.py checks the manifest and the scripts; fairy-stockfi
 | **Mark builder** | `content/hints/marks.js`, `score.js` | turns the engine's answer into the marks to draw, writes the scores |
 | **Hint painter** | `content/hints/draw.js` | arrows, outlines and cards over the board |
 | **Move finder** | `content/board/moves.js` | which move turned one position into the next (lichess side to move) |
+| **Evaluation bar** | `content/hints/evalbar.js` | White's winning chances beside the board |
 | **Panel** | `content/ui/panel.js`, `content/ui/status.js` | the settings panel, its status line and move list, the HUD |
-| **Cursor trail** | `content/ui/trail.js` | particles behind the mouse pointer |
+| **Cursor trail** | `content/ui/trail.js` | a ribbon behind the mouse pointer |
 | **Settings** | `content/core/settings.js` | defaults, saving, migration |
-| **Engine registry** | `background/engine/models.js` | the eight engine models |
+| **Build flag** | `build.js` | the full build or StockCrab Lite (shared by the page and the background) |
+| **Engine registry** | `background/engine/models.js` | the nine engine models |
+| **Strength** | `background/engine/strength.js` | the Elo scale 200 – 3800 |
 | **Search runner** and **Search queue** | `background/engine/search.js`, `queue.js` | one search at a time, a newer request replaces the waiting one |
 | **UCI line builder** | `background/engine/uci-lines.js` | exact scores only, lines from the last complete depth |
 | **Engine boot and recovery** | `background/engine/boot.js` | starts the engine, falls back to another build, restarts after a crash |
