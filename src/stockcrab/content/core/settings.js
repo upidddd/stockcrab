@@ -60,12 +60,12 @@ const DEFAULTS = {
   opacity: 70,
   blur: MOBILE ? 0 : 4, // px, 0 = off
   hintStyle: "glossy", // "glossy" (sheen, gradient, glow) or "flat"
-  glow: MOBILE ? 4 : 7, // glow around glossy hints, 0 = off
+  glow: 0, // a soft glow around glossy hints, 0 = off (it blurs the edges)
   panelIcon: "", // the user's own picture for the panel's header (a data: PNG), empty = the crab
   showOutline: true,
   showHead: true,
   showLabels: true,
-  version: 5, // for migrations
+  version: 6, // for migrations
   animate: true,
   // panel
   theme: "auto", // "auto", "light" or "dark"

@@ -94,6 +94,16 @@ function tint(hex, k) {
 }
 let glossCounter = 0;
 
+// the side of a line the light comes from: the normal that points up and to the left
+function litNormal(ux, uy) {
+  let nx = -uy, ny = ux;
+  if (nx + ny > 0) {
+    nx = -nx;
+    ny = -ny;
+  }
+  return [nx, ny];
+}
+
 // Draws all hints as one SVG over the board.
 function drawMarks(board, marks, animate = false) {
   const anim = animate && settings.animate;
@@ -123,6 +133,16 @@ function drawMarks(board, marks, animate = false) {
       gradients[col] = `url(#${id})`;
     }
     return gradients[col];
+  };
+  // a gradient across a stroke from its lit edge (x1, y1) to its far edge (x2, y2), in board pixels
+  let tubes = 0;
+  const tube = (col, x1, y1, x2, y2) => {
+    const id = `stockcrab-tube-${gid}-${tubes++}`;
+    const g = svgEl("linearGradient", { id, gradientUnits: "userSpaceOnUse", x1, y1, x2, y2 });
+    for (const [o, c] of [[0, tint(col, 0.1)], [0.14, tint(col, 0.72)], [0.27, tint(col, 0.32)], [0.55, col], [0.82, tint(col, -0.22)], [1, tint(col, -0.42)]])
+      g.appendChild(svgEl("stop", { offset: o, "stop-color": c }));
+    defs.appendChild(g);
+    return `url(#${id})`;
   };
   const glowId = `stockcrab-glow-${gid}`;
   if (glossy && settings.glow > 0) {
@@ -215,15 +235,22 @@ function drawMarks(board, marks, animate = false) {
       // the threat is dashed: it is not a move to play
       if (threat) line.setAttribute("stroke-dasharray", `${lw * 1.6} ${lw * 1.4}`);
       shape.appendChild(line);
-      // the sheen: a thin light line along the arrow, nudged toward the top left, where the light comes from
+      // glossy: each straight piece of the arrow is shaded across its width like a glass tube, with a sharp
+      // highlight on the lit side and a shadow on the other; the flat line underneath fills the round joints
       if (glossy && !threat) {
-        const o = lw * 0.16;
-        const sheen = svgEl("polyline", {
-          points: pts.map((p) => `${p.x - o},${p.y - o}`).join(" "), fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round",
-          stroke: "#ffffff", "stroke-opacity": 0.42, "stroke-width": lw * 0.3,
-        });
-        shape.appendChild(sheen);
-        if (anim) animateIn(sheen, [{ opacity: 0 }, { opacity: 1 }], 160, 160);
+        for (let i = 1; i < pts.length; i++) {
+          const a0 = pts[i - 1], a1 = pts[i];
+          const l = Math.hypot(a1.x - a0.x, a1.y - a0.y);
+          if (!l) continue;
+          const [nx, ny] = litNormal((a1.x - a0.x) / l, (a1.y - a0.y) / l);
+          const mx = (a0.x + a1.x) / 2, my = (a0.y + a1.y) / 2, h = lw / 2;
+          const piece = svgEl("line", {
+            x1: a0.x, y1: a0.y, x2: a1.x, y2: a1.y, "stroke-linecap": "butt", "stroke-width": lw,
+            stroke: tube(col, mx + nx * h, my + ny * h, mx - nx * h, my - ny * h),
+          });
+          shape.appendChild(piece);
+          if (anim) animateIn(piece, [{ opacity: 0 }, { opacity: 1 }], 120, 120);
+        }
       }
       if (anim && !threat) {
         let L = 0;
@@ -232,9 +259,15 @@ function drawMarks(board, marks, animate = false) {
       }
       if (hl) {
         const tip = { x: tc.x - ux * sq * 0.03, y: tc.y - uy * sq * 0.03 };
+        let headPaint = col;
+        if (glossy && !threat) {
+          const [nx, ny] = litNormal(ux, uy);
+          const cx = (tip.x + bx) / 2, cy = (tip.y + by) / 2;
+          headPaint = tube(col, cx + nx * hw, cy + ny * hw, cx - nx * hw, cy - ny * hw);
+        }
         const headEl = svgEl("polygon", {
           points: `${tip.x},${tip.y} ${bx - uy * hw},${by + ux * hw} ${bx + uy * hw},${by - ux * hw}`,
-          fill: gloss(col), stroke: gloss(col), "stroke-width": sq * 0.025, "stroke-linejoin": "round",
+          fill: headPaint, stroke: headPaint, "stroke-width": sq * 0.025, "stroke-linejoin": "round",
         });
         shape.appendChild(headEl);
         if (anim) animateIn(headEl, [{ opacity: 0, transform: "scale(0.5)", transformOrigin: `${tip.x}px ${tip.y}px` }, { transform: "scale(1)", transformOrigin: `${tip.x}px ${tip.y}px` }], 120, 150);
