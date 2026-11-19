@@ -22,13 +22,13 @@ function setStrength(req, model) {
   req.eloNodes = 0;
   if (elo >= hi) {
     if (!model.noElo) option("UCI_LimitStrength", false);
-    option("Skill Level", 20);
+    if (!model.crab) option("Skill Level", 20);
     if (elo < ELO_MAX) req.eloNodes = eloNodes(elo, hi);
     return;
   }
   if (model.noElo) option("Skill Level", Math.max(0, Math.min(20, Math.round(((elo - lo) / (hi - lo)) * 20))));
   else {
-    option("Skill Level", 20);
+    if (!model.crab) option("Skill Level", 20);
     option("UCI_LimitStrength", true);
     option("UCI_Elo", Math.max(lo, elo));
   }

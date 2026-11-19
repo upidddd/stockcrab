@@ -1,8 +1,10 @@
 // Engine models and the state of the running engine.
 
 // elo: UCI_Elo range; noElo: strength via Skill Level only; nnue: has "Use NNUE"; maia: no search, plays like people;
-// quick: a fixed shallow depth instead of a think time (fast, weaker); mobile: part of the light build
+// quick: a fixed shallow depth instead of a think time (fast, weaker); mobile: part of the light build;
+// crab: StockCrab's own engine (a character, its own Elo scale, no Skill Level)
 const MODELS = {
+  "stockcrab-v1": { name: "StockCrab v1", file: "engine/stockcrab/stockcrab.js", bootMs: 15000, maxHash: 256, elo: [200, 3000], crab: true, mobile: true },
   "sf19-full": { name: "Stockfish 19 Full", file: "engine/stockfish-19-single.js", bootMs: 60000, maxHash: 256, elo: [1320, 3190] },
   "sf19-lite": { name: "Stockfish 19 Lite", file: "engine/stockfish-19-lite-single.js", bootMs: 25000, maxHash: 256, elo: [1320, 3190], mobile: true },
   "sf19-quick": { name: "Stockfish 19 Quick", file: "engine/stockfish-19-lite-single.js", bootMs: 25000, maxHash: 256, elo: [1320, 3190], quick: true, mobile: true },
@@ -34,6 +36,7 @@ function send(cmd) {
 // Options the panel's own controls set, or that make no sense in a browser: not offered as engine options.
 const MANAGED_OPTIONS = new Set([
   "MultiPV", "UCI_Elo", "UCI_LimitStrength", "Skill Level", "Hash", "Threads", "UCI_ShowWDL", "Use NNUE", "Opponent Elo",
+  "Personality", "Talk", "Clear Hash",
   "EvalFile", "EvalFileSmall", "Debug Log File", "SyzygyPath", "NumaPolicy", "UCI_Variant", "VariantPath", "Protocol",
 ]);
 

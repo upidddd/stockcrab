@@ -17,6 +17,8 @@ const DEFAULTS = {
   nodes: 0, // thousands of nodes, 0 = no limit
   showWdl: false,
   useNnue: true, // Fairy-Stockfish: NNUE or classical evaluation
+  character: "Balanced", // StockCrab v1's personality
+  crabTalk: true, // StockCrab v1 comments on the game in the status line
   maiaRating: 1500,
   maiaOppo: 500, // 500 = same as maiaRating
   maiaShow: "score", // card shows "share" of players or "score"

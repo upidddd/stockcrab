@@ -30,7 +30,7 @@ try {
             settings[c.key] = Math.min(c.max, Math.max(c.min, Number.isFinite(Number(settings[c.key])) ? Number(settings[c.key]) : DEFAULTS[c.key]));
           }
           // a value no control offers (an old model name, a broken colour) goes back to the default
-          if (c.type === "select" && !c.opts.some(([v]) => v === settings[c.key])) settings[c.key] = DEFAULTS[c.key];
+          if ((c.type === "select" || c.type === "modelpick") && !c.opts.some(([v]) => v === settings[c.key])) settings[c.key] = DEFAULTS[c.key];
           if (c.type === "color" && !/^#[0-9a-f]{6}$/i.test(settings[c.key])) settings[c.key] = DEFAULTS[c.key];
         }
       } catch (e) {}

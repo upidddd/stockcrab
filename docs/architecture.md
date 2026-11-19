@@ -18,7 +18,7 @@ src/stockcrab/
 ├── background/             hosts the engine (an event page)
 │   ├── engine/             the registry, the search, the queue, boot and recovery
 │   └── premove/            premove analysis and the pawn-trade rule
-└── engine/                 the engines: Stockfish builds, fairy/ (Fairy-Stockfish), maia/ (Maia 3 as a UCI worker), licences
+└── engine/                 the engines: stockcrab/ (StockCrab v1, our own, github.com/upidddd/stockcrab-engine), Stockfish builds, fairy/ (Fairy-Stockfish), maia/ (Maia 3 as a UCI worker), licences
 ```
 
 ## Components

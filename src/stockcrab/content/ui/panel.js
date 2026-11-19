@@ -1,7 +1,8 @@
 // Settings panel and HUD.
 
-const MOBILE_MODELS = ["sf19-lite", "sf19-quick", "sf19-asm"]; // the light build ships only these
+const MOBILE_MODELS = ["stockcrab-v1", "sf19-lite", "sf19-quick", "sf19-asm"]; // the light build ships only these
 const MODEL_OPTIONS = [
+  ["stockcrab-v1", "StockCrab v1"],
   ["sf19-full", "Stockfish 19 · Full"],
   ["sf19-lite", "Stockfish 19 · Lite"],
   ["sf19-quick", "Stockfish 19 · Quick"],
@@ -13,6 +14,7 @@ const MODEL_OPTIONS = [
 
 // What each model can do; the panel shows only the settings that apply.
 const MODEL_INFO = {
+  "stockcrab-v1": { elo: [200, 3000], noWdl: true, crab: true },
   "sf19-full": { elo: [1320, 3190] },
   "sf19-lite": { elo: [1320, 3190] },
   "sf19-quick": { elo: [1320, 3190], quick: true },
@@ -22,6 +24,16 @@ const MODEL_INFO = {
   "maia3": { maia: true },
 };
 const modelInfo = (s = settings) => MODEL_INFO[s.model] || {};
+
+// StockCrab v1's characters, as its engine names them
+const CHARACTERS = {
+  "Balanced": "Plays the position: no favourite plan, no fear.",
+  "Angry Crab": "Goes for your king, hates draws, keeps its knights.",
+  "Coward": "King safety first, happy with a draw, trades into safety.",
+  "Kamikaze": "Everything at the king; material is a detail.",
+  "Hoarder": "Grabs material and holds on to it.",
+  "Positional": "Slow squeeze: pawn structure and active pieces over adventures.",
+};
 const searching = (s) => !modelInfo(s).maia;
 const timed = (s) => searching(s) && !modelInfo(s).quick;
 
@@ -33,7 +45,11 @@ const CORNERS = [["tl", "Top left"], ["tr", "Top right"], ["bl", "Bottom left"],
 const SECTIONS = [
   ["configs", "Configs", [{ key: "_configs", type: "configs" }]],
   ["engine", "Engine", [
-    { key: "model", type: "select", label: "Model", opts: MODEL_OPTIONS, fx: "engine" },
+    { key: "model", type: "modelpick", label: "Model", opts: MODEL_OPTIONS, fx: "engine" },
+    { key: "_crabNote", type: "note", text: "StockCrab's own engine: 280 KB, with a character. Every dial (aggression, caution, greed, contempt…) is under Engine options.", when: (s) => !!modelInfo(s).crab },
+    { key: "character", type: "select", label: "Character", opts: Object.keys(CHARACTERS).map((k) => [k, k]), fx: "query", when: (s) => !!modelInfo(s).crab },
+    { key: "_characterNote", type: "note", text: (s) => CHARACTERS[s.character] || "", when: (s) => !!modelInfo(s).crab },
+    { key: "crabTalk", type: "check", label: "The crab comments on the game", fx: "panel", when: (s) => !!modelInfo(s).crab },
     { key: "_maiaNote", type: "note", text: "Maia suggests the moves players of this rating play most.", when: (s) => !searching(s) },
     { key: "maiaRating", type: "range", label: "Players' rating", min: 600, max: 2600, step: 50, fmt: (v) => v, fx: "query", when: (s) => !searching(s) },
     { key: "maiaOppo", type: "range", label: "Opponent's rating", min: 500, max: 2600, step: 50, fmt: (v) => (v <= 500 ? "same" : v), fx: "query", when: (s) => !searching(s) },
@@ -134,7 +150,7 @@ function cleanConfig(values) {
     const v = values[c.key];
     if (c.type === "range" && Number.isFinite(v)) out[c.key] = Math.min(c.max, Math.max(c.min, v));
     else if (c.type === "check" && typeof v === "boolean") out[c.key] = v;
-    else if (c.type === "select" && c.opts.some(([o]) => o === v)) out[c.key] = v;
+    else if ((c.type === "select" || c.type === "modelpick") && c.opts.some(([o]) => o === v)) out[c.key] = v;
     else if (c.type === "color" && /^#[0-9a-f]{6}$/i.test(v)) out[c.key] = v;
     else if (c.type === "opening" && typeof v === "string" && v.length <= 120) out[c.key] = v;
   }
@@ -367,6 +383,27 @@ const PANEL_CSS = `
   .pre-msg:empty, .upd-msg:empty { display: none; }
   .ctl[hidden] { display: none; }
 
+  /* the model list with the StockCrab mark */
+  .mp-btn { display: flex; align-items: center; gap: 6px; cursor: pointer; max-width: 170px; text-align: left; }
+  .mobile .mp-btn { max-width: 60%; }
+  .mp-btn .mp-name { flex: 1; min-width: 0; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mp-btn em { font-style: normal; color: var(--muted); font-size: 10px; }
+  .mp-ic { display: contents; }
+  .mp-icon { display: inline-flex; width: 18px; height: 18px; flex: none; }
+  .mp-icon svg { width: 18px; height: 18px; }
+  .mp-list { margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 4px; display: grid; gap: 1px; }
+  .mp-list[hidden] { display: none; }
+  .mp-list button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; border: 0; border-radius: 6px; background: none;
+    font: inherit; font-size: 12px; color: var(--fg); text-align: left; cursor: pointer; }
+  .mp-list button:hover, .mp-list button:focus-visible { background: var(--soft); outline: none; }
+  .mp-list button[aria-selected="true"] { color: var(--accent); font-weight: 600; }
+
+  /* what the crab says */
+  .say { margin-top: 6px; display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--fg); font-style: italic; }
+  .say[hidden], .off .say { display: none; }
+  .say-ic { display: inline-flex; width: 16px; height: 16px; flex: none; }
+  .say-ic svg { width: 16px; height: 16px; }
+
   .op { position: relative; }
   .sugg { margin-top: 4px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); overflow: hidden; }
   .sugg[hidden] { display: none; }
@@ -441,11 +478,17 @@ function controlInner(c) {
       <input type="range" data-key="${c.key}" min="${c.min}" max="${c.max}" step="${c.step}">`;
   }
   if (c.type === "check") return `<label class="chk"><input type="checkbox" data-key="${c.key}"><span>${c.label}</span></label>`;
+  if (c.type === "modelpick") {
+    // a list of its own instead of <select>: an option of a native select can not show the StockCrab mark
+    const items = c.opts.map(([v, t]) => `<button type="button" role="option" data-mpv="${v}">${modelIcon(v)}<span>${t}</span></button>`).join("");
+    return `<div class="mp"><div class="sel"><span>${c.label}</span><button type="button" class="field mp-btn" aria-haspopup="listbox" aria-expanded="false"><i class="mp-ic"></i><b class="mp-name"></b><em aria-hidden="true">▾</em></button></div>
+      <div class="mp-list" role="listbox" aria-label="${c.label}" hidden>${items}</div></div>`;
+  }
   if (c.type === "select") {
     const opts = c.opts.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
     return `<label class="sel"><span>${c.label}</span><select data-key="${c.key}">${opts}</select></label>`;
   }
-  if (c.type === "note") return `<div class="note">${c.text}</div>`;
+  if (c.type === "note") return `<div class="note">${typeof c.text === "function" ? c.text(settings) : c.text}</div>`;
   if (c.type === "opening") {
     return `<div class="op"><label class="sel"><span>${c.label}</span><input class="field txt" data-key="${c.key}" placeholder="Engine only" spellcheck="false" autocomplete="off"></label><div class="sugg" hidden></div></div>`;
   }
@@ -463,6 +506,21 @@ function controlInner(c) {
     return `<div class="upd"><span class="upd-text"></span><button class="btn main" data-up="install" hidden>Update</button></div><div class="upd-msg"></div>`;
   }
   return `<label class="sel"><span>${c.label}</span><input type="color" data-key="${c.key}"></label>`;
+}
+
+// the purple crab for StockCrab's own engine, an empty slot of the same width for the others
+const modelIcon = (v) => (MODEL_INFO[v]?.crab ? `<i class="mp-icon">${CRAB_V1_SVG}</i>` : `<i class="mp-icon"></i>`);
+
+function pickModel(v, shadow) {
+  const before = settings.model;
+  shadow.querySelector(".mp-list").hidden = true;
+  shadow.querySelector(".mp-btn").setAttribute("aria-expanded", "false");
+  if (v === before || !MODEL_INFO[v]) return;
+  settings.model = v;
+  if (settings.enabled) sendEngineChoice();
+  loadUciOptions();
+  syncPanel();
+  save();
 }
 
 function mountPanel() {
@@ -493,6 +551,7 @@ function mountPanel() {
       <div class="body">${sections}</div>
       <div class="moves"></div>
       <div class="status"></div>
+      <div class="say" hidden><i class="say-ic">${CRAB_V1_SVG}</i><span></span></div>
     </div>
     <div class="hud" hidden></div>`;
   document.body.appendChild(host);
@@ -551,6 +610,34 @@ function mountPanel() {
     if (/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName) && e.target.type !== "range" && e.target.type !== "checkbox") e.stopPropagation();
   });
   // picking a config applies it
+  const mpBtn = shadow.querySelector(".mp-btn"), mpList = shadow.querySelector(".mp-list");
+  mpBtn.addEventListener("click", () => {
+    mpList.hidden = !mpList.hidden;
+    mpBtn.setAttribute("aria-expanded", String(!mpList.hidden));
+    if (!mpList.hidden) (mpList.querySelector('[aria-selected="true"]') || mpList.firstElementChild)?.focus();
+  });
+  mpList.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-mpv]");
+    if (b) pickModel(b.dataset.mpv, shadow);
+  });
+  mpList.addEventListener("keydown", (e) => {
+    const items = [...mpList.querySelectorAll("[data-mpv]")];
+    const i = items.indexOf(shadow.activeElement);
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      items[(i + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus();
+    } else if (e.key === "Escape") {
+      mpList.hidden = true;
+      mpBtn.setAttribute("aria-expanded", "false");
+      mpBtn.focus();
+    }
+  });
+  shadow.addEventListener("pointerdown", (e) => {
+    if (!mpList.hidden && !e.composedPath().some((n) => n === mpList || n === mpBtn)) {
+      mpList.hidden = true;
+      mpBtn.setAttribute("aria-expanded", "false");
+    }
+  });
   shadow.querySelector(".pre-list").addEventListener("change", (e) => {
     configPick = e.target.value;
     if (settings.presets[configPick]) onConfigAction("apply", shadow);
@@ -770,7 +857,15 @@ function syncPanel() {
   for (const c of CONTROLS) {
     const wrap = r.querySelector(`[data-ctl="${c.key}"]`);
     if (wrap) wrap.hidden = c.when ? !c.when(settings) : false;
+    if (c.type === "modelpick" && wrap) {
+      const cur = c.opts.find(([v]) => v === settings[c.key]) || c.opts[0];
+      wrap.querySelector(".mp-name").textContent = cur[1];
+      wrap.querySelector(".mp-ic").innerHTML = modelIcon(cur[0]);
+      wrap.querySelectorAll("[data-mpv]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.mpv === cur[0])));
+      continue;
+    }
     if (typeof c.label === "function") r.querySelector(`[data-l="${c.key}"]`).textContent = c.label(settings);
+    if (c.type === "note" && typeof c.text === "function" && wrap) wrap.querySelector(".note").textContent = c.text(settings);
     const el = r.querySelector(`[data-key="${c.key}"]`);
     if (!el) continue;
     if (c.type === "check") el.checked = !!settings[c.key];
@@ -807,6 +902,7 @@ function hudRows(s) {
   };
   const [model, build] = optText("model").split(" · ");
   const rows = [[model.replace(/\s+/g, ""), build ? build.replace(/^\w/, (c) => c.toUpperCase()) : ""]];
+  if (modelInfo(s).crab) rows.push(["Character", s.character]);
   if (searching(s)) {
     rows.push(["Strength", s.strengthBy === "skill" ? `Skill ${s.skill}` : s.elo >= 3800 ? "Full" : `${s.elo} Elo`]);
     if (modelInfo(s).quick) rows.push(["Depth", String(s.quickDepth)]);

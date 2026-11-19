@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Builds StockCrab Lite, the light build for phones, from the same sources: dist/mobile/ and dist/stockcrab-lite-<version>.xpi.
 
-Only the small engines go in (Stockfish 19 Lite, Quick and JavaScript, a few MB instead of a few hundred), build.js says
+Only the small engines go in (StockCrab v1 and Stockfish 19 Lite, Quick and JavaScript, a few MB instead of a few hundred), build.js says
 "mobile" (a panel sized for fingers along the bottom of the screen, no cursor trail, HUD or hotkey) and the add-on has
 its own id, so it installs next to the full version. --chrome also writes dist/stockcrab-lite-chrome-<version>.zip."""
 import argparse, json, os, re, shutil, subprocess, sys, zipfile
@@ -27,6 +27,12 @@ for f in engines:
     if os.path.exists(os.path.join(SRC, wasm)):
         keep.add(wasm)
 keep.add("engine/COPYING.txt")
+# the licence and readme files next to each kept engine
+for f in list(keep):
+    folder = os.path.dirname(f)
+    for name in os.listdir(os.path.join(SRC, folder)):
+        if name.upper().startswith(("LICENSE", "COPYING", "README")):
+            keep.add(f"{folder}/{name}")
 
 def ignore(dirpath, names):
     rel = os.path.relpath(dirpath, SRC).replace(os.sep, "/")
@@ -34,7 +40,10 @@ def ignore(dirpath, names):
     if rel == "engine" or rel.startswith("engine/"):
         for n in names:
             p = f"{rel}/{n}"
-            if os.path.isdir(os.path.join(dirpath, n)) or p not in keep:
+            if os.path.isdir(os.path.join(dirpath, n)):
+                if not any(k.startswith(p + "/") for k in keep):
+                    out.add(n)
+            elif p not in keep:
                 out.add(n)
     return out
 

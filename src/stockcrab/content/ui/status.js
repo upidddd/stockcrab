@@ -12,6 +12,14 @@ function setStatus(text, kind = "") {
   el.title = "Click: copy the position that was read\n" + lastRead;
 }
 
+// what StockCrab v1 says about the game, under the status line
+function setSay(text) {
+  const el = root()?.querySelector(".say");
+  if (!el) return;
+  el.hidden = !text;
+  el.querySelector("span").textContent = text || "";
+}
+
 const pretty = (m) => `${m.slice(0, 2)} → ${m.slice(2, 4)}${m.length > 4 ? "=" + m[4].toUpperCase() : ""}`;
 
 function listMoves(marks, animate = false) {

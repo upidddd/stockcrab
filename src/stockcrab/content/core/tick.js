@@ -134,6 +134,7 @@ async function tick() {
             wdl: settings.showWdl, nnue: settings.useNnue,
             maiaRating: settings.maiaRating, maiaOppo: settings.maiaOppo,
             uci: (settings.uci || {})[settings.model], quickDepth: settings.quickDepth,
+            character: settings.character, talk: settings.crabTalk,
             opening: (fen.split(" ")[1] === "w" ? settings.openingWhite : settings.openingBlack).trim(),
             bookMaxLoss: settings.bookMaxLoss >= 500 ? 1e9 : settings.bookMaxLoss,
           }
@@ -143,7 +144,7 @@ async function tick() {
             mode: settings.premoveMode, likelyCount: settings.likelyCount, likelyWithin: settings.likelyWithin,
             obviousLead: settings.obviousLead, replyGap: settings.replyGap,
             pawnTrade: settings.pawnTrade, tradeTolerance: settings.tradeTolerance, nnue: settings.useNnue,
-            uci: (settings.uci || {})[settings.model],
+            uci: (settings.uci || {})[settings.model], character: settings.character,
           },
     );
   } catch (e) {
@@ -192,6 +193,7 @@ async function tick() {
   placeEval(board);
   show(board, marks, true);
   setStatus(bestStatus(marks, res), "ok");
+  if (res.say && settings.crabTalk && modelInfo().crab) setSay(res.say);
   if (settings.threat && searching(settings)) showThreat(board, fen, id);
 }
 

@@ -30,7 +30,12 @@ function start(req) {
     option("Skill Level", Math.max(0, Math.min(20, req.skill ?? 20)));
   } else setStrength(req, model);
   option("MultiPV", Math.min(256, Math.max(req.multipv ?? 1, req.aggression > 0 ? 2 : 1, req.weak > 0 ? WEAK_LINES : 1)));
-  if (!model.noElo) option("UCI_ShowWDL", !!req.wdl);
+  if (!model.noElo && !model.crab) option("UCI_ShowWDL", !!req.wdl);
+  // StockCrab's own engine: its character, and whether the crab talks
+  if (model.crab) {
+    option("Personality", req.character || "Balanced");
+    option("Talk", !!req.talk);
+  }
   if (model.nnue) option("Use NNUE", req.nnue !== false);
   option("Hash", Math.min(req.hash || 128, model.maxHash));
   applyUserOptions(req.uci);
@@ -62,6 +67,10 @@ function onEngineMessage(event) {
       pending = null;
       start(next);
     }
+  } else if (line.startsWith("info string crab: ")) {
+    if (busy) busy.say = line.slice(18); // StockCrab's engine commenting on the game
+  } else if (line.startsWith("info string ")) {
+    // other engine messages are not shown
   } else if (line.startsWith("info")) {
     if (busy) parseInfo(busy, line);
   } else if (line.startsWith("bestmove")) {
@@ -85,7 +94,7 @@ function onEngineMessage(event) {
     }
     const chosen = lines.find((l) => l.move === move) || deepestFor(done, move);
     done.resolve({
-      id: done.id, move, depth, maia: !!MODELS[modelId].maia,
+      id: done.id, move, depth, maia: !!MODELS[modelId].maia, say: done.say || null,
       chosen: chosen ? { move: chosen.move, score: chosen.score, mate: chosen.mate, depth: chosen.depth, pv: chosen.pv, wdl: chosen.wdl, share: chosen.share } : null,
       lines: lines.map((c) => ({ move: c.move, pv: c.pv, score: c.score, mate: c.mate, depth: c.depth, wdl: c.wdl, share: c.share })),
     });
