@@ -224,6 +224,7 @@ The complete list in load order, the data flow and how to add a file are in [`do
 
 - StockCrab is released under the **GNU GPL v3** ([LICENSE](LICENSE)), the same licence as the bundled engines.
 - Engines: [stockfish.js](https://github.com/nmrugg/stockfish.js) © Chess.com, LLC, and [Stockfish](https://github.com/official-stockfish/Stockfish) © the Stockfish developers (GPLv3).
+- Engine logos in the model list: Stockfish's from [stockfish-web](https://github.com/official-stockfish/stockfish-web) (MIT), Fairy-Stockfish's from [fairy-stockfish.github.io](https://github.com/fairy-stockfish/fairy-stockfish.github.io), Maia's from [maia-platform-frontend](https://github.com/CSSLab/maia-platform-frontend) (GPLv3); each belongs to its project and only names that project's engine.
 - Opening book: [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings) (CC0).
 - Intro video: music *Free Uplifting Music* by [Seth_Makes_Sounds](https://freesound.org/people/Seth_Makes_Sounds/sounds/670819/) (CC0); chess pieces in the video: cburnett set; typeface: Inter.
 - chess.com and lichess.org are trademarks of their owners. StockCrab is an independent project and is not affiliated with or endorsed by them.

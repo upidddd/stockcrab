@@ -224,6 +224,7 @@ tools/               check.py проверяет манифест и скрип�
 
 - StockCrab выпускается под **GNU GPL v3** ([LICENSE](LICENSE)), как и встроенные движки.
 - Движки: [stockfish.js](https://github.com/nmrugg/stockfish.js) © Chess.com, LLC и [Stockfish](https://github.com/official-stockfish/Stockfish) © разработчики Stockfish (GPLv3).
+- Логотипы движков в списке моделей: Stockfish из [stockfish-web](https://github.com/official-stockfish/stockfish-web) (MIT), Fairy-Stockfish с [fairy-stockfish.github.io](https://github.com/fairy-stockfish/fairy-stockfish.github.io), Maia из [maia-platform-frontend](https://github.com/CSSLab/maia-platform-frontend) (GPLv3); каждый принадлежит своему проекту и лишь обозначает его движок.
 - Дебютная книга: [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings) (CC0).
 - Видео-интро: музыка *Free Uplifting Music* автора [Seth_Makes_Sounds](https://freesound.org/people/Seth_Makes_Sounds/sounds/670819/) (CC0); шахматные фигуры в видео: набор cburnett; шрифт: Inter.
 - chess.com и lichess.org являются товарными знаками их владельцев. StockCrab независимый проект и не связан с ними и не одобрен ими.

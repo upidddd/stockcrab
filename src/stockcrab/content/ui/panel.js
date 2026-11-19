@@ -410,7 +410,8 @@ const PANEL_CSS = `
   .mp-btn em { font-style: normal; color: var(--muted); font-size: 10px; }
   .mp-ic { display: contents; }
   .mp-icon { display: inline-flex; width: 18px; height: 18px; flex: none; }
-  .mp-icon svg { width: 18px; height: 18px; }
+  .mp-icon svg, .mp-icon img { width: 18px; height: 18px; display: block; }
+  .mp-icon img { border-radius: 4px; object-fit: contain; }
   .mp-list { margin-top: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); padding: 4px; display: grid; gap: 1px; }
   .mp-list[hidden] { display: none; }
   .mp-list button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 5px 8px; border: 0; border-radius: 6px; background: none;
