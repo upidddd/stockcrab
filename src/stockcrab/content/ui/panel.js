@@ -127,7 +127,7 @@ const SECTIONS = [
     { key: "colourOutline", type: "color", label: "Square outline colour", fx: "render" },
     { key: "lineWidth", type: "range", label: "Line width", min: 50, max: 200, step: 10, fmt: (v) => v + "%", fx: "render" },
     { key: "opacity", type: "range", label: "Opacity", min: 30, max: 100, step: 5, fmt: (v) => v + "%", fx: "render" },
-    { key: "hintStyle", type: "select", label: "Hint style", opts: [["glossy", "Glossy"], ["flat", "Flat"]], fx: "render" },
+    { key: "hintStyle", type: "select", label: "Hint style", opts: [["flat", "Flat"], ["glossy", "Glossy"]], fx: "render" },
     { key: "glow", type: "range", label: "Glow", min: 0, max: 20, step: 1, fmt: (v) => (v ? v : "off"), fx: "render", when: (s) => s.hintStyle !== "flat" },
     { key: "blur", type: "range", label: "Blur under the hints", min: 0, max: 12, step: 1, fmt: (v) => (v ? v + " px" : "off"), fx: "render", desktop: true },
     { key: "showOutline", type: "check", label: "Outline the squares", fx: "render" },

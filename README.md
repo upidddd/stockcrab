@@ -119,7 +119,7 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 | **Analysis** | the evaluation bar, how many moves of the best line the list shows (0 – 10), the opponent's threat and its colour |
 | **Opening** | an opening for White and for Black (a name with its variations, *Any book line* or *Gambits*), how much worse than the engine's move a book move may be |
 | **Premove** | on or off, style, how sure the style has to be, how many likely replies are checked and for how long |
-| **Look** | panel theme, accent colour, hint colours, hint style (glossy with a sheen and a glow, or flat) and glow, line width, opacity, blur under the hints, outline, arrow head, score on the board, animations, cursor trail |
+| **Look** | panel theme, accent colour, hint colours, hint style (flat with the blur under the hints by default, or glossy) and glow, line width, opacity, blur under the hints, outline, arrow head, score on the board, animations, cursor trail |
 | **Panel** | your own picture as the panel's icon, corner, which side I play, the `Alt+X` hotkey, the HUD and its corner, update check |
 
 ## Strength
