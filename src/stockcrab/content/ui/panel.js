@@ -37,7 +37,26 @@ const CHARACTERS = {
 const searching = (s) => !modelInfo(s).maia;
 const timed = (s) => searching(s) && !modelInfo(s).quick;
 
-const eloText = (v) => (v >= 3800 ? "3800 · full" : v);
+// each engine's own Elo range: the slider stops where the engine does, and its top is full strength
+const eloRange = (s = settings) => modelInfo(s).elo || [1320, 3190];
+const eloText = (v) => (v >= eloRange()[1] ? `${v} · full` : `${v}`);
+
+// keeps the Elo inside the current model's range, and each model's own Elo and Skill level
+function normalizeStrength(previousModel) {
+  if (!settings.eloByModel || typeof settings.eloByModel !== "object") settings.eloByModel = {};
+  if (!settings.skillByModel || typeof settings.skillByModel !== "object") settings.skillByModel = {};
+  if (previousModel && previousModel !== settings.model) {
+    settings.eloByModel[previousModel] = settings.elo;
+    settings.skillByModel[previousModel] = settings.skill;
+    const [, hi] = eloRange();
+    settings.elo = settings.eloByModel[settings.model] ?? hi;
+    settings.skill = settings.skillByModel[settings.model] ?? 20;
+  }
+  const [lo, hi] = eloRange();
+  settings.elo = Math.min(hi, Math.max(lo, Number(settings.elo) || hi));
+  settings.eloByModel[settings.model] = settings.elo;
+  settings.skillByModel[settings.model] = settings.skill;
+}
 const nodesText = (v) => (!v ? "off" : v < 1000 ? v + "k" : (v / 1000).toFixed(v % 1000 ? 2 : 0) + "M");
 const secText = (v) => (v / 1000).toFixed(1) + " s";
 const CORNERS = [["tl", "Top left"], ["tr", "Top right"], ["bl", "Bottom left"], ["br", "Bottom right"]];
@@ -56,7 +75,7 @@ const SECTIONS = [
     { key: "maiaShow", type: "select", label: "Card shows", opts: [["score", "Score"], ["share", "Share of players"]], fx: "render", when: (s) => !searching(s) },
     { key: "quickDepth", type: "range", label: "Depth", min: 1, max: 20, step: 1, fmt: (v) => v, fx: "query", when: (s) => !!modelInfo(s).quick },
     { key: "strengthBy", type: "select", label: "Strength by", opts: [["elo", "Elo"], ["skill", "Skill level"]], fx: "query", when: searching },
-    { key: "elo", type: "range", label: "Strength (Elo)", min: 200, max: 3800, step: 10, fmt: eloText, fx: "query", when: (s) => searching(s) && s.strengthBy !== "skill" },
+    { key: "elo", type: "range", label: "Strength (Elo)", min: 200, max: 3800, bounds: eloRange, step: 10, fmt: eloText, fx: "query", when: (s) => searching(s) && s.strengthBy !== "skill" },
     { key: "skill", type: "range", label: "Skill level", min: 0, max: 20, step: 1, fmt: (v) => (v >= 20 ? "20 (max)" : v), fx: "query", when: (s) => searching(s) && s.strengthBy === "skill" },
     { key: "movetime", type: "range", label: "Think time", min: 500, max: 30000, step: 500, fmt: secText, fx: "query", when: timed },
     { key: "depth", type: "range", label: "Max depth", min: 0, max: 40, step: 1, fmt: (v) => (v ? v : "off"), fx: "query", when: timed },
@@ -168,6 +187,7 @@ function cleanConfig(values) {
 function applyConfig(values) {
   const model = settings.model;
   Object.assign(settings, cleanConfig(values));
+  normalizeStrength();
   if (settings.model !== model && settings.enabled) sendEngineChoice();
   lastKey = null;
   rerender();
@@ -475,7 +495,7 @@ function controlHtml(c) {
 function controlInner(c) {
   if (c.type === "range") {
     return `<div class="lab"><span data-l="${c.key}">${typeof c.label === "function" ? c.label(settings) : c.label}</span><b data-v="${c.key}"></b></div>
-      <input type="range" data-key="${c.key}" min="${c.min}" max="${c.max}" step="${c.step}">`;
+      <input type="range" data-key="${c.key}" min="${c.bounds ? c.bounds()[0] : c.min}" max="${c.bounds ? c.bounds()[1] : c.max}" step="${c.step}">`;
   }
   if (c.type === "check") return `<label class="chk"><input type="checkbox" data-key="${c.key}"><span>${c.label}</span></label>`;
   if (c.type === "modelpick") {
@@ -508,8 +528,8 @@ function controlInner(c) {
   return `<label class="sel"><span>${c.label}</span><input type="color" data-key="${c.key}"></label>`;
 }
 
-// the purple crab for StockCrab's own engine, an empty slot of the same width for the others
-const modelIcon = (v) => (MODEL_INFO[v]?.crab ? `<i class="mp-icon">${CRAB_V1_SVG}</i>` : `<i class="mp-icon"></i>`);
+// each engine's mark (constants.js), or an empty slot of the same width
+const modelIcon = (v) => `<i class="mp-icon">${MODEL_ICONS[v] || ""}</i>`;
 
 function pickModel(v, shadow) {
   const before = settings.model;
@@ -517,6 +537,7 @@ function pickModel(v, shadow) {
   shadow.querySelector(".mp-btn").setAttribute("aria-expanded", "false");
   if (v === before || !MODEL_INFO[v]) return;
   settings.model = v;
+  normalizeStrength(before);
   if (settings.enabled) sendEngineChoice();
   loadUciOptions();
   syncPanel();
@@ -593,6 +614,7 @@ function mountPanel() {
     if ((e.type === "input") !== (c.type === "range" || c.type === "color")) return;
     const before = settings[c.key];
     settings[c.key] = c.type === "range" ? Number(el.value) : c.type === "check" ? el.checked : c.type === "opening" ? el.value.trim() : el.value;
+    if (c.key === "elo" || c.key === "skill") normalizeStrength();
     if (settings[c.key] === before && c.type !== "range") return;
     if (c.fx === "engine") {
       if (settings.enabled) sendEngineChoice();
@@ -653,6 +675,7 @@ function mountPanel() {
   shadow.querySelector(".reset").addEventListener("click", () => {
     const keep = { enabled: settings.enabled, presets: settings.presets };
     settings = { ...JSON.parse(JSON.stringify(DEFAULTS)), ...keep };
+    normalizeStrength();
     if (settings.enabled) sendEngineChoice();
     lastKey = null;
     rerender();
@@ -871,8 +894,14 @@ function syncPanel() {
     if (c.type === "check") el.checked = !!settings[c.key];
     else if (el !== r.activeElement || c.type !== "opening") el.value = settings[c.key] ?? "";
     if (c.type === "range") {
+      const [lo, hi] = c.bounds ? c.bounds() : [c.min, c.max];
+      if (c.bounds) {
+        el.min = lo;
+        el.max = hi;
+        el.value = settings[c.key];
+      }
       r.querySelector(`[data-v="${c.key}"]`).textContent = c.fmt(settings[c.key]);
-      el.style.setProperty("--p", ((settings[c.key] - c.min) / (c.max - c.min)) * 100 + "%");
+      el.style.setProperty("--p", ((settings[c.key] - lo) / (hi - lo)) * 100 + "%");
     }
   }
   syncConfigs(r);
@@ -904,7 +933,7 @@ function hudRows(s) {
   const rows = [[model.replace(/\s+/g, ""), build ? build.replace(/^\w/, (c) => c.toUpperCase()) : ""]];
   if (modelInfo(s).crab) rows.push(["Character", s.character]);
   if (searching(s)) {
-    rows.push(["Strength", s.strengthBy === "skill" ? `Skill ${s.skill}` : s.elo >= 3800 ? "Full" : `${s.elo} Elo`]);
+    rows.push(["Strength", s.strengthBy === "skill" ? `Skill ${s.skill}` : s.elo >= eloRange(s)[1] ? "Full" : `${s.elo} Elo`]);
     if (modelInfo(s).quick) rows.push(["Depth", String(s.quickDepth)]);
     else {
       rows.push(["ThinkTime", (s.movetime / 1000).toFixed(1) + "s"]);

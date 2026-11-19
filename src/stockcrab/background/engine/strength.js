@@ -20,10 +20,10 @@ function setStrength(req, model) {
   const [lo, hi] = model.elo || [1320, 3190];
   req.weak = 0;
   req.eloNodes = 0;
+  // the panel keeps the Elo inside the model's own range; its top is full strength
   if (elo >= hi) {
     if (!model.noElo) option("UCI_LimitStrength", false);
     if (!model.crab) option("Skill Level", 20);
-    if (elo < ELO_MAX) req.eloNodes = eloNodes(elo, hi);
     return;
   }
   if (model.noElo) option("Skill Level", Math.max(0, Math.min(20, Math.round(((elo - lo) / (hi - lo)) * 20))));

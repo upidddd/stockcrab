@@ -40,7 +40,7 @@ Best move, other good moves with a score for each, and a premove while your oppo
 
 - **StockCrab v1, our own engine.** 280 KB instead of Stockfish's tens of megabytes, with a character: Balanced, Angry Crab, Coward, Kamikaze, Hoarder or Positional, and every dial behind them (aggression, caution, greed, activity, pawn structure, contempt, risk, a favourite piece) under *Engine options*. It comments on the game if you let it. It is the purple crab in the model list; source and the comparison with Stockfish: [stockcrab-engine](https://github.com/upidddd/stockcrab-engine).
 - **Hints on the board.** An arrow (a knight's bends like an L) and outlined squares for the best move, its score on the target square, and up to three other good moves drawn thinner. A promotion says which piece (*= Queen*); an optional blur sits under the arrows.
-- **Strength from 200 to 3800 Elo.** One scale for every Stockfish model. Inside the engine's own range it limits itself; below it the move is picked among the engine's lines, and the lower the Elo the more often a worse one; above it the engine plays at full strength within a search budget that grows with the Elo, and 3800 has no budget at all ([how](#strength)).
+- **Each engine's own strength.** The Elo slider stops where the engine does (StockCrab v1 200 – 3000, Stockfish 1320 – 3190, Fairy-Stockfish 500 – 2850), its top is full strength, and every engine remembers its own setting ([how](#strength)).
 - **Analysis.** An evaluation bar beside the board, the best line after every move in the list, and the opponent's threat (the move they would play if it were their turn) as a dashed arrow.
 - **Premoves.** While your opponent thinks, StockCrab can show the reply worth premoving, in three styles, including a rule-based pawn retake ([how](#premoves)).
 - **Openings and gambits.** Pick an opening for White and for Black from 3,865 book lines (every named opening and gambit, or just *Gambits*): the hints follow it while the game stays in the book and the move is not much worse, then the engine takes over.
@@ -113,7 +113,7 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 | Section | What you can set |
 |---|---|
 | **Configs** | your own sets of all settings: save under a name, pick one to apply it, delete, export to a file, import from a file |
-| **Engine** | model (StockCrab v1 with its character and whether it talks); strength by Elo (200 – 3800 on every Stockfish model, [how](#strength)) or by Skill level (0 – 20), think time (0.5 – 30 s), depth and node limits, aggression, hash (16 – 256 MB), win / draw / loss; NNUE or classical evaluation for Fairy-Stockfish; for Maia: players' and opponent's rating, what the card shows. Only the settings the chosen model uses are shown |
+| **Engine** | model (StockCrab v1 with its character and whether it talks); strength by Elo (in each engine's own range, remembered per engine, [how](#strength)) or by Skill level (0 – 20), think time (0.5 – 30 s), depth and node limits, aggression, hash (16 – 256 MB), win / draw / loss; NNUE or classical evaluation for Fairy-Stockfish; for Maia: players' and opponent's rating, what the card shows. Only the settings the chosen model uses are shown |
 | **Engine options** | every option the chosen engine reports (e.g. Move Overhead, nodestime, Ponder, UCI_Chess960; Contempt for Stockfish 11; Maia's mate search depth and time), with a reset |
 | **Moves** | how many other good moves (0 – 3) and how far behind they may be (for Maia: how many players play them), score units, scores for the side to move or for White, the move list in the panel |
 | **Analysis** | the evaluation bar, how many moves of the best line the list shows (0 – 10), the opponent's threat and its colour |
@@ -124,16 +124,17 @@ On top of that, **pawn retakes** are premoved by rule: if they can take your paw
 
 ## Strength
 
-The *Strength (Elo)* slider goes from 200 to 3800 on every Stockfish model, and every step of it changes how the engine plays:
+The *Strength (Elo)* slider covers exactly what the chosen engine can do, and its top is full strength. Each engine keeps its own setting, so switching models and back finds the strength you left.
 
-| Elo | What the engine does |
+| Model | Elo slider |
 |---|---|
-| below the model's own range (under 1320 for Stockfish, 500 for Fairy-Stockfish) | plays at its lowest Elo with eight lines, then picks one of them: each line is weighted by how much of the expected score it gives away, and the lower the Elo, the more often a worse line wins. The same position at the same Elo always gets the same move |
-| inside the model's range | the engine's own `UCI_Elo` limit |
-| from the top of the range to 3799 | full strength within a node budget: 40 thousand nodes at the top of the range, growing to 4 million just under 3800 (the smaller of this and *Max nodes* is used) |
-| 3800 | full strength, no budget |
+| StockCrab v1 | 200 – 3000 |
+| Stockfish 19 (Full, Lite, Quick, JavaScript) | 1320 – 3190 |
+| Stockfish 11 Classic | 1320 – 3190, mapped onto *Skill Level* (it has no `UCI_Elo`) |
+| Fairy-Stockfish | 500 – 2850 |
+| Maia 3 | its own players' rating, 600 – 2600 |
 
-Stockfish 11 has no `UCI_Elo`, so inside the range its Elo is mapped onto *Skill Level*. Maia keeps its own rating (600 – 2600). Premoves and the threat are always searched at full strength.
+Below the top the engine uses its own `UCI_Elo` limit; at the top it plays at full strength. Premoves and the threat are always searched at full strength.
 
 ## Engines
 
@@ -207,7 +208,7 @@ tools/               check.py checks the manifest and the scripts; fairy-stockfi
 | **Settings** | `content/core/settings.js` | defaults, saving, migration |
 | **Build flag** | `build.js` | the full build or StockCrab Lite (shared by the page and the background) |
 | **Engine registry** | `background/engine/models.js` | the eight engine models |
-| **Strength** | `background/engine/strength.js` | the Elo scale 200 – 3800 |
+| **Strength** | `background/engine/strength.js` | the engine's own Elo limit, full strength at the top of its range |
 | **Search runner** and **Search queue** | `background/engine/search.js`, `queue.js` | one search at a time, a newer request replaces the waiting one |
 | **UCI line builder** | `background/engine/uci-lines.js` | exact scores only, lines from the last complete depth |
 | **Engine boot and recovery** | `background/engine/boot.js` | starts the engine, falls back to another build, restarts after a crash |

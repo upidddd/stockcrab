@@ -5,7 +5,9 @@ const DEFAULTS = {
   enabled: false,
   collapsed: MOBILE, // on a phone the panel starts as a strip under the board
   // engine
-  elo: 3800, // 200 – 3800, 3800 = full strength
+  elo: 3800, // within the model's own range (MODEL_INFO), its top = full strength; kept per model in eloByModel
+  eloByModel: {}, // model -> Elo, so each engine keeps its own strength
+  skillByModel: {}, // model -> Skill level
   movetime: MOBILE ? 3000 : 6000,
   depth: 0, // 0 = no limit
   aggression: 0,
@@ -60,7 +62,7 @@ const DEFAULTS = {
   showOutline: true,
   showHead: true,
   showLabels: true,
-  version: 4, // for migrations
+  version: 5, // for migrations
   animate: true,
   // panel
   theme: "auto", // "auto", "light" or "dark"
