@@ -74,13 +74,13 @@ const SECTIONS = [
     { key: "maiaOppo", type: "range", label: "Opponent's rating", min: 500, max: 2600, step: 50, fmt: (v) => (v <= 500 ? "same" : v), fx: "query", when: (s) => !searching(s) },
     { key: "maiaShow", type: "select", label: "Card shows", opts: [["score", "Score"], ["share", "Share of players"]], fx: "render", when: (s) => !searching(s) },
     { key: "quickDepth", type: "range", label: "Depth", min: 1, max: 20, step: 1, fmt: (v) => v, fx: "query", when: (s) => !!modelInfo(s).quick },
-    { key: "strengthBy", type: "select", label: "Strength by", opts: [["elo", "Elo"], ["skill", "Skill level"]], fx: "query", when: searching },
-    { key: "elo", type: "range", label: "Strength (Elo)", min: 200, max: 3800, bounds: eloRange, step: 10, fmt: eloText, fx: "query", when: (s) => searching(s) && s.strengthBy !== "skill" },
-    { key: "skill", type: "range", label: "Skill level", min: 0, max: 20, step: 1, fmt: (v) => (v >= 20 ? "20 (max)" : v), fx: "query", when: (s) => searching(s) && s.strengthBy === "skill" },
+    { key: "strengthBy", type: "select", label: "Strength by", opts: [["elo", "Elo"], ["skill", "Skill level"]], fx: "query", when: (s) => searching(s) && !modelInfo(s).crab },
+    { key: "elo", type: "range", label: "Strength (Elo)", min: 200, max: 3800, bounds: eloRange, step: 10, fmt: eloText, fx: "query", when: (s) => searching(s) && (s.strengthBy !== "skill" || !!modelInfo(s).crab) },
+    { key: "skill", type: "range", label: "Skill level", min: 0, max: 20, step: 1, fmt: (v) => (v >= 20 ? "20 (max)" : v), fx: "query", when: (s) => searching(s) && s.strengthBy === "skill" && !modelInfo(s).crab },
     { key: "movetime", type: "range", label: "Think time", min: 500, max: 30000, step: 500, fmt: secText, fx: "query", when: timed },
     { key: "depth", type: "range", label: "Max depth", min: 0, max: 40, step: 1, fmt: (v) => (v ? v : "off"), fx: "query", when: timed },
     { key: "nodes", type: "range", label: "Max nodes", min: 0, max: 5000, step: 50, fmt: nodesText, fx: "query", when: timed },
-    { key: "aggression", type: "range", label: "Aggression", min: 0, max: 100, step: 10, fmt: (v) => v + "%", fx: "query", when: searching },
+    { key: "aggression", type: "range", label: "Aggression", min: 0, max: 100, step: 10, fmt: (v) => v + "%", fx: "query", when: (s) => searching(s) && !modelInfo(s).crab },
     { key: "hash", type: "range", label: "Hash memory", min: 16, max: 256, step: 16, fmt: (v) => Math.min(v, modelInfo().maxHash || 256) + " MB", fx: "query", when: searching },
     { key: "useNnue", type: "check", label: "NNUE evaluation", fx: "query", when: (s) => !!modelInfo(s).nnue },
     { key: "showWdl", type: "check", label: "Show win / draw / loss", fx: "query", when: (s) => !modelInfo(s).noWdl },
@@ -135,6 +135,7 @@ const SECTIONS = [
     { key: "showLabels", type: "check", label: "Score on the board", fx: "render" },
     { key: "animate", type: "check", label: "Animations", fx: "panel" },
     { key: "cursorTrail", type: "check", label: "Cursor trail", fx: "panel", desktop: true },
+    { key: "crabCursor", type: "check", label: "Crab cursor with StockCrab v1", fx: "panel", desktop: true, when: (s) => !!modelInfo(s).crab },
   ]],
   ["panel", "Panel", [
     { key: "corner", type: "select", label: "Position", opts: CORNERS, fx: "panel", desktop: true },
@@ -346,6 +347,8 @@ const PANEL_CSS = `
   .logo { display: flex; flex: none; } .logo svg, .logo img { width: 24px; height: 24px; }
   .logo img, .icon-prev img { border-radius: 6px; object-fit: cover; display: block; }
   .icon-row { display: flex; align-items: center; gap: 6px; flex: none; }
+  .icon-row .btn { padding: 0 8px; }
+  .sel > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .icon-prev { display: inline-flex; width: 22px; height: 22px; } .icon-prev svg, .icon-prev img { width: 22px; height: 22px; }
   .mobile .logo svg, .mobile .logo img { width: 28px; height: 28px; }
   .name { flex: 1; min-width: 0; }
@@ -490,6 +493,9 @@ const PANEL_CSS = `
   .mobile .mv .san { font-size: 15px; }
   .mobile .mv .co, .mobile .mv .dt { font-size: 11.5px; }
   .mobile .status { font-size: 13px; min-height: 20px; }
+  .mobile .btn.x { width: 34px; font-size: 18px; }
+  .mobile .note, .mobile .say { font-size: 12.5px; }
+  .mobile .mp-list button { padding: 9px 10px; font-size: 13.5px; }
   .mobile.collapsed .mv:not(:first-child) { display: none; }
   .mobile.collapsed .moves { margin-top: 6px; }
   .mobile.collapsed .status { margin-top: 6px; }
@@ -532,7 +538,7 @@ function controlInner(c) {
   }
   if (c.type === "uci") return `<div class="uci"></div>`;
   if (c.type === "icon") {
-    return `<div class="sel"><span>${c.label}</span><span class="icon-row"><i class="icon-prev"></i><button type="button" class="btn" data-icon="pick">Choose image</button><button type="button" class="btn" data-icon="reset">Crab</button></span></div>
+    return `<div class="sel"><span>${c.label}</span><span class="icon-row"><i class="icon-prev"></i><button type="button" class="btn" data-icon="pick" title="Choose a picture for the panel">Change</button><button type="button" class="btn" data-icon="reset" title="Back to the crab">Reset</button></span></div>
       <input type="file" class="icon-file" accept="image/*" hidden>`;
   }
   if (c.type === "update") {
@@ -911,6 +917,7 @@ async function onUpdateAction(act, shadow) {
 function syncPanel() {
   const r = root();
   if (!r) return;
+  updateCrabCursor();
   r.host.style.setProperty("--accent", /^#[0-9a-f]{6}$/i.test(settings.accent) ? settings.accent : DEFAULTS.accent);
   const box = r.querySelector(".box");
   box.className = `box c-${settings.corner} theme-${settings.theme || "auto"}` + (MOBILE ? " mobile" : "") + (settings.enabled ? "" : " off") +
@@ -985,14 +992,14 @@ function hudRows(s) {
   const rows = [[model.replace(/\s+/g, ""), build ? build.replace(/^\w/, (c) => c.toUpperCase()) : ""]];
   if (modelInfo(s).crab) rows.push(["Character", s.character]);
   if (searching(s)) {
-    rows.push(["Strength", s.strengthBy === "skill" ? `Skill ${s.skill}` : s.elo >= eloRange(s)[1] ? "Full" : `${s.elo} Elo`]);
+    rows.push(["Strength", s.strengthBy === "skill" && !modelInfo(s).crab ? `Skill ${s.skill}` : s.elo >= eloRange(s)[1] ? "Full" : `${s.elo} Elo`]);
     if (modelInfo(s).quick) rows.push(["Depth", String(s.quickDepth)]);
     else {
       rows.push(["ThinkTime", (s.movetime / 1000).toFixed(1) + "s"]);
       if (s.depth) rows.push(["MaxDepth", String(s.depth)]);
       if (s.nodes) rows.push(["MaxNodes", nodesText(s.nodes)]);
     }
-    if (s.aggression) rows.push(["Aggression", s.aggression + "%"]);
+    if (s.aggression && !modelInfo(s).crab) rows.push(["Aggression", s.aggression + "%"]);
     if (s.premove) rows.push(["Premove", { smart: "Smart", likely: "Likely", safe: "Safe" }[s.premoveMode] || s.premoveMode]);
     if (s.useNnue === false && modelInfo(s).nnue) rows.push(["ClassicalEval", ""]);
   } else rows.push(["Players", String(s.maiaRating)]);

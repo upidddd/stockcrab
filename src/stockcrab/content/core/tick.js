@@ -25,6 +25,7 @@ function retryLater(id) {
 
 async function tick() {
   mountPanel();
+  updateCrabCursor();
 
   if (!settings.enabled) {
     if (lastKey !== null) {
@@ -128,9 +129,9 @@ async function tick() {
         ? {
             type: "hint", id, fen,
             elo: settings.elo, movetime: modelInfo().quick ? 20000 : settings.movetime, depth: settings.depth, hash: settings.hash,
-            aggression: settings.aggression,
+            aggression: modelInfo().crab ? 0 : settings.aggression,
             multipv: 1 + settings.others,
-            nodes: settings.nodes * 1000, strengthBy: settings.strengthBy, skill: settings.skill,
+            nodes: settings.nodes * 1000, strengthBy: modelInfo().crab ? "elo" : settings.strengthBy, skill: settings.skill,
             wdl: settings.showWdl, nnue: settings.useNnue,
             maiaRating: settings.maiaRating, maiaOppo: settings.maiaOppo,
             uci: (settings.uci || {})[settings.model], quickDepth: settings.quickDepth,

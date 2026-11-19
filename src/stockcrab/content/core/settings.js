@@ -71,6 +71,7 @@ const DEFAULTS = {
   theme: "auto", // "auto", "light" or "dark"
   accent: "#e4572e", // panel, HUD and cursor trail
   cursorTrail: false,
+  crabCursor: true, // the purple crab as the mouse pointer while StockCrab v1 gives the hints
   corner: "br",
   hotkey: true,
   showHud: false,
