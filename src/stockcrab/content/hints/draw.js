@@ -84,6 +84,16 @@ function textOn(hex) {
 
 const PROMOTION = { q: "= Queen", r: "= Rook", b: "= Bishop", n: "= Knight" };
 
+// a colour mixed toward white (k > 0) or black (k < 0)
+function tint(hex, k) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const f = (v) => Math.round(k >= 0 ? v + (255 - v) * k : v * (1 + k)).toString(16).padStart(2, "0");
+  return "#" + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
+}
+let glossCounter = 0;
+
 // Draws all hints as one SVG over the board.
 function drawMarks(board, marks, animate = false) {
   const anim = animate && settings.animate;
@@ -94,6 +104,37 @@ function drawMarks(board, marks, animate = false) {
   const br = board.getBoundingClientRect();
   const svg = svgEl("svg", { class: MARK, width: br.width, height: br.height, viewBox: `0 0 ${br.width} ${br.height}` });
   svg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:20;overflow:visible";
+
+  // glossy style: a light-to-dark gradient per colour, a sheen along the arrows and a soft glow
+  const glossy = settings.hintStyle !== "flat";
+  const gid = ++glossCounter;
+  const defs = svgEl("defs", {});
+  svg.appendChild(defs);
+  const gradients = {};
+  const gloss = (col) => {
+    if (!glossy) return col;
+    if (!gradients[col]) {
+      const id = `stockcrab-gloss-${gid}-${Object.keys(gradients).length}`;
+      const g = svgEl("linearGradient", { id, x1: 0, y1: 0, x2: 0, y2: 1 });
+      g.appendChild(svgEl("stop", { offset: 0, "stop-color": tint(col, 0.42) }));
+      g.appendChild(svgEl("stop", { offset: 0.5, "stop-color": col }));
+      g.appendChild(svgEl("stop", { offset: 1, "stop-color": tint(col, -0.28) }));
+      defs.appendChild(g);
+      gradients[col] = `url(#${id})`;
+    }
+    return gradients[col];
+  };
+  const glowId = `stockcrab-glow-${gid}`;
+  if (glossy && settings.glow > 0) {
+    const sd = (settings.glow / 10) * (br.width / 8) * 0.06;
+    const f = svgEl("filter", { id: glowId, x: "-50%", y: "-50%", width: "200%", height: "200%", "color-interpolation-filters": "sRGB" });
+    f.appendChild(svgEl("feGaussianBlur", { in: "SourceGraphic", stdDeviation: sd, result: "soft" }));
+    const merge = svgEl("feMerge", {});
+    merge.appendChild(svgEl("feMergeNode", { in: "soft" }));
+    merge.appendChild(svgEl("feMergeNode", { in: "SourceGraphic" }));
+    f.appendChild(merge);
+    defs.appendChild(f);
+  }
   const k = settings.lineWidth / 100;
   const infos = [];
   const allParts = [];
@@ -127,6 +168,7 @@ function drawMarks(board, marks, animate = false) {
     const op = (alt ? 0.68 : 1) * (settings.opacity / 100);
     // outlines and arrow of one move in one group
     const shape = svgEl("g", { opacity: op });
+    if (glossy && settings.glow > 0) shape.setAttribute("filter", `url(#${glowId})`);
     svg.appendChild(shape);
 
     if (settings.showOutline && !threat) {
@@ -134,7 +176,7 @@ function drawMarks(board, marks, animate = false) {
       for (const r of [from, to]) {
         const outline = svgEl("rect", {
           x: r.x + ow / 2, y: r.y + ow / 2, width: r.w - ow, height: r.h - ow,
-          fill: "none", stroke: m.kind === "premove" ? settings.colourPremove : settings.colourOutline, "stroke-width": ow, "stroke-linejoin": "miter",
+          fill: "none", stroke: gloss(m.kind === "premove" ? settings.colourPremove : settings.colourOutline), "stroke-width": ow, "stroke-linejoin": "miter",
         });
         shape.appendChild(outline);
         if (anim) animateIn(outline, [{ opacity: 0 }, { opacity: 1 }], 0, 160);
@@ -173,6 +215,16 @@ function drawMarks(board, marks, animate = false) {
       // the threat is dashed: it is not a move to play
       if (threat) line.setAttribute("stroke-dasharray", `${lw * 1.6} ${lw * 1.4}`);
       shape.appendChild(line);
+      // the sheen: a thin light line along the arrow, nudged toward the top left, where the light comes from
+      if (glossy && !threat) {
+        const o = lw * 0.16;
+        const sheen = svgEl("polyline", {
+          points: pts.map((p) => `${p.x - o},${p.y - o}`).join(" "), fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round",
+          stroke: "#ffffff", "stroke-opacity": 0.42, "stroke-width": lw * 0.3,
+        });
+        shape.appendChild(sheen);
+        if (anim) animateIn(sheen, [{ opacity: 0 }, { opacity: 1 }], 160, 160);
+      }
       if (anim && !threat) {
         let L = 0;
         for (let i = 1; i < pts.length; i++) L += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
@@ -182,7 +234,7 @@ function drawMarks(board, marks, animate = false) {
         const tip = { x: tc.x - ux * sq * 0.03, y: tc.y - uy * sq * 0.03 };
         const headEl = svgEl("polygon", {
           points: `${tip.x},${tip.y} ${bx - uy * hw},${by + ux * hw} ${bx + uy * hw},${by - ux * hw}`,
-          fill: col, stroke: col, "stroke-width": sq * 0.025, "stroke-linejoin": "round",
+          fill: gloss(col), stroke: gloss(col), "stroke-width": sq * 0.025, "stroke-linejoin": "round",
         });
         shape.appendChild(headEl);
         if (anim) animateIn(headEl, [{ opacity: 0, transform: "scale(0.5)", transformOrigin: `${tip.x}px ${tip.y}px` }, { transform: "scale(1)", transformOrigin: `${tip.x}px ${tip.y}px` }], 120, 150);
@@ -228,7 +280,7 @@ function drawMarks(board, marks, animate = false) {
         t.textContent = str;
         return t;
       };
-      const card = svgEl("rect", { fill: col, opacity: Math.min(1, op + 0.05) });
+      const card = svgEl("rect", { fill: gloss(col), opacity: Math.min(1, op + 0.05) });
       const t1 = score ? text(score, sq * (alt ? 0.125 : 0.14), 700) : null;
       const t2 = words ? text(words, sq * 0.09, 500, "opacity:.92") : null;
       svg.appendChild(card);
@@ -333,6 +385,15 @@ function drawMarks(board, marks, animate = false) {
       card.setAttribute("width", q.w);
       card.setAttribute("height", q.h);
       card.setAttribute("rx", sq * 0.05);
+      if (glossy) {
+        // the card's sheen: a light top half
+        const sheen = svgEl("rect", {
+          x: q.x + q.h * 0.06, y: q.y + q.h * 0.06, width: Math.max(0, q.w - q.h * 0.12), height: q.h * 0.42,
+          rx: sq * 0.04, fill: "#ffffff", opacity: 0.2,
+        });
+        card.after(sheen);
+        if (anim) animateIn(sheen, [{ opacity: 0 }, { opacity: 0.2 }], 150, 170);
+      }
       blurShape(q.x, q.y, q.w, q.h, `border-radius:${sq * 0.05}px`);
       let cy = q.y + padY;
       if (t1) {

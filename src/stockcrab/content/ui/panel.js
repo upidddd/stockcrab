@@ -127,6 +127,8 @@ const SECTIONS = [
     { key: "colourOutline", type: "color", label: "Square outline colour", fx: "render" },
     { key: "lineWidth", type: "range", label: "Line width", min: 50, max: 200, step: 10, fmt: (v) => v + "%", fx: "render" },
     { key: "opacity", type: "range", label: "Opacity", min: 30, max: 100, step: 5, fmt: (v) => v + "%", fx: "render" },
+    { key: "hintStyle", type: "select", label: "Hint style", opts: [["glossy", "Glossy"], ["flat", "Flat"]], fx: "render" },
+    { key: "glow", type: "range", label: "Glow", min: 0, max: 20, step: 1, fmt: (v) => (v ? v : "off"), fx: "render", when: (s) => s.hintStyle !== "flat" },
     { key: "blur", type: "range", label: "Blur under the hints", min: 0, max: 12, step: 1, fmt: (v) => (v ? v + " px" : "off"), fx: "render", desktop: true },
     { key: "showOutline", type: "check", label: "Outline the squares", fx: "render" },
     { key: "showHead", type: "check", label: "Arrow head", fx: "render" },
@@ -141,6 +143,7 @@ const SECTIONS = [
     { key: "showHud", type: "check", label: "HUD", fx: "panel", desktop: true },
     { key: "hudCorner", type: "select", label: "HUD position", opts: CORNERS, fx: "panel", when: (s) => s.showHud, desktop: true },
     { key: "checkUpdates", type: "check", label: "Check for updates", fx: "panel" },
+    { key: "panelIcon", type: "icon", label: "Panel icon" },
     { key: "_update", type: "update" },
   ]],
 ];
@@ -172,6 +175,7 @@ function cleanConfig(values) {
     else if ((c.type === "select" || c.type === "modelpick") && c.opts.some(([o]) => o === v)) out[c.key] = v;
     else if (c.type === "color" && /^#[0-9a-f]{6}$/i.test(v)) out[c.key] = v;
     else if (c.type === "opening" && typeof v === "string" && v.length <= 120) out[c.key] = v;
+    else if (c.type === "icon" && typeof v === "string" && (v === "" || (/^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(v) && v.length < 300000))) out[c.key] = v;
   }
   if (values.uci && typeof values.uci === "object") {
     out.uci = {};
@@ -339,7 +343,11 @@ const PANEL_CSS = `
   .hud .hl span { margin-left: 3px; color: #c9c3bd; }
 
   .head { display: flex; align-items: center; gap: 8px; }
-  .logo { display: flex; flex: none; } .logo svg { width: 24px; height: 24px; }
+  .logo { display: flex; flex: none; } .logo svg, .logo img { width: 24px; height: 24px; }
+  .logo img, .icon-prev img { border-radius: 6px; object-fit: cover; display: block; }
+  .icon-row { display: flex; align-items: center; gap: 6px; flex: none; }
+  .icon-prev { display: inline-flex; width: 22px; height: 22px; } .icon-prev svg, .icon-prev img { width: 22px; height: 22px; }
+  .mobile .logo svg, .mobile .logo img { width: 28px; height: 28px; }
   .name { flex: 1; min-width: 0; }
   .title { font-size: 14px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; color: var(--fg); }
   .sub { font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -523,6 +531,10 @@ function controlInner(c) {
     </div>`;
   }
   if (c.type === "uci") return `<div class="uci"></div>`;
+  if (c.type === "icon") {
+    return `<div class="sel"><span>${c.label}</span><span class="icon-row"><i class="icon-prev"></i><button type="button" class="btn" data-icon="pick">Choose image</button><button type="button" class="btn" data-icon="reset">Crab</button></span></div>
+      <input type="file" class="icon-file" accept="image/*" hidden>`;
+  }
   if (c.type === "update") {
     return `<div class="upd"><span class="upd-text"></span><button class="btn main" data-up="install" hidden>Update</button></div><div class="upd-msg"></div>`;
   }
@@ -565,7 +577,7 @@ function mountPanel() {
   shadow.innerHTML = `<style>${PANEL_CSS}</style>
     <div class="box">
       <div class="head">
-        <span class="logo">${LOGO_SVG}</span>
+        <span class="logo"></span>
         <div class="name"><div class="title">StockCrab</div><div class="sub einfo"></div></div>
         <label class="sw" title="Alt+X"><input type="checkbox" class="on"><i></i></label>
         <button class="fold" title="Collapse">▾</button>
@@ -665,6 +677,37 @@ function mountPanel() {
     configPick = e.target.value;
     if (settings.presets[configPick]) onConfigAction("apply", shadow);
     syncConfigs(shadow);
+  });
+  // the panel icon: any picture, cut to a square and shrunk to 64 px, kept with the settings
+  const iconFile = shadow.querySelector(".icon-file");
+  shadow.querySelector('[data-icon="pick"]').addEventListener("click", () => iconFile.click());
+  shadow.querySelector('[data-icon="reset"]').addEventListener("click", () => {
+    settings.panelIcon = "";
+    syncPanel();
+    save();
+  });
+  iconFile.addEventListener("change", () => {
+    const file = iconFile.files && iconFile.files[0];
+    iconFile.value = "";
+    if (!file || !file.type.startsWith("image/")) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = c.height = 64;
+      const side = Math.min(img.naturalWidth, img.naturalHeight);
+      c.getContext("2d").drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, 64, 64);
+      URL.revokeObjectURL(url);
+      try {
+        settings.panelIcon = c.toDataURL("image/png");
+      } catch (e) {
+        return;
+      }
+      syncPanel();
+      save();
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
   });
   shadow.querySelector(".pre-name").addEventListener("keydown", (e) => {
     if (e.key === "Enter") onConfigAction("save", shadow);
@@ -873,6 +916,14 @@ function syncPanel() {
   box.className = `box c-${settings.corner} theme-${settings.theme || "auto"}` + (MOBILE ? " mobile" : "") + (settings.enabled ? "" : " off") +
     (settings.collapsed ? " collapsed" : "") + (settings.showList ? "" : " no-list") + (settings.animate ? " anim" : "");
   r.querySelector(".fold").textContent = settings.collapsed ? "▸" : "▾";
+  const icon = settings.panelIcon || "";
+  const logo = r.querySelector(".logo");
+  if (logo.dataset.icon !== icon || !logo.firstChild) {
+    logo.innerHTML = icon ? `<img src="${icon}" alt="">` : LOGO_SVG;
+    logo.dataset.icon = icon;
+    const prev = r.querySelector(".icon-prev");
+    if (prev) prev.innerHTML = icon ? `<img src="${icon}" alt="">` : LOGO_SVG;
+  }
   r.querySelector(".on").checked = settings.enabled;
   r.querySelectorAll("details").forEach((d) => {
     const open = !!settings.sections[d.dataset.section];
