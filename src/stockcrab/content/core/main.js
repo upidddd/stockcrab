@@ -14,8 +14,6 @@ try {
       if (saved.colourPremove === "#d62828") delete saved.colourPremove;
       // 0.2: one Elo scale 200 – 3800; the old top (3190) meant full strength, below a model's range it played at its lowest
       if (saved.eloByModel && typeof saved.eloByModel !== "object") delete saved.eloByModel;
-      if ((saved.version || 1) < 6) delete saved.glow; // 0.2.3: the glow is off by default, its blur looked soapy
-      if ((saved.version || 1) < 7 && saved.hintStyle === "glossy") delete saved.hintStyle; // 0.2.3: flat by default, gloss is a choice
       if ((saved.version || 1) < 4 && Number.isFinite(saved.elo)) {
         if (saved.elo >= 3190) saved.elo = 3800;
         else if (saved.elo < 1320 && saved.model !== "fairy") saved.elo = 1320;
@@ -36,7 +34,7 @@ try {
           if ((c.type === "select" || c.type === "modelpick") && !c.opts.some(([v]) => v === settings[c.key])) settings[c.key] = DEFAULTS[c.key];
           if (c.type === "color" && !/^#[0-9a-f]{6}$/i.test(settings[c.key])) settings[c.key] = DEFAULTS[c.key];
         }
-      } catch (e) {}
+      } catch {}
     }
     normalizeStrength(); // each model's own Elo, inside the range it supports
     syncPanel();
@@ -45,7 +43,7 @@ try {
       refreshUpdate(false);
     }
   });
-} catch (e) {}
+} catch {}
 
 document.addEventListener("keydown", (e) => {
   if (!extensionAlive() || !settings.hotkey || !e.altKey || e.ctrlKey || e.metaKey || e.code !== "KeyX") return;

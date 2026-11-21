@@ -6,7 +6,7 @@ const RELEASE_PAGE = "https://github.com/upidddd/stockcrab/releases/latest";
 let update = { current: null, latest: null, url: RELEASE_PAGE, checked: 0, error: null };
 try {
   update.current = browser.runtime.getManifest().version;
-} catch (e) {}
+} catch {}
 
 const newer = (a, b) => {
   const x = String(a).split(".").map(Number);
@@ -48,4 +48,4 @@ async function installUpdate() {
 
 try {
   browser.runtime.onUpdateAvailable?.addListener(() => browser.runtime.reload());
-} catch (e) {}
+} catch {}

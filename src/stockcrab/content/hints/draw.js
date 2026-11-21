@@ -14,7 +14,7 @@ function clearMarks(fade = false) {
         a.onfinish = () => el.remove();
         setTimeout(() => el.remove(), 400);
         return;
-      } catch (e) {}
+      } catch {}
     }
     el.remove();
   });
@@ -66,7 +66,7 @@ function animateIn(el, frames, delay = 0, duration = 180) {
   if (!el || !el.animate) return;
   try {
     el.animate(frames, { duration, delay, easing: "cubic-bezier(.2,.7,.3,1)", fill: "backwards" });
-  } catch (e) {}
+  } catch {}
 }
 
 // Black or white text for a badge colour.
@@ -84,24 +84,30 @@ function textOn(hex) {
 
 const PROMOTION = { q: "= Queen", r: "= Rook", b: "= Bishop", n: "= Knight" };
 
-// a colour mixed toward white (k > 0) or black (k < 0)
-function tint(hex, k) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
-  if (!m) return hex;
-  const n = parseInt(m[1], 16);
-  const f = (v) => Math.round(k >= 0 ? v + (255 - v) * k : v * (1 + k)).toString(16).padStart(2, "0");
-  return "#" + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
-}
-let glossCounter = 0;
+let glassCounter = 0;
 
-// the side of a line the light comes from: the normal that points up and to the left
-function litNormal(ux, uy) {
-  let nx = -uy, ny = ux;
-  if (nx + ny > 0) {
-    nx = -nx;
-    ny = -ny;
-  }
-  return [nx, ny];
+// Glass look from SVG's own lighting filters: the blurred alpha is a height map, a diffuse light shades it and a
+// specular light adds the highlight. `size` is the thickness of the thing being lit, `region` the area it fills.
+function glassFilter(defs, region, size, strength) {
+  const id = `stockcrab-glass-${++glassCounter}`;
+  const s = strength / 100;
+  const scale = size * (0.7 + 0.9 * s);
+  const f = svgEl("filter", {
+    id, filterUnits: "userSpaceOnUse", x: region.x, y: region.y, width: region.w, height: region.h, "color-interpolation-filters": "sRGB",
+  });
+  const add = (name, attrs, kids = []) => {
+    const el = svgEl(name, attrs);
+    for (const [n, a] of kids) el.appendChild(svgEl(n, a));
+    f.appendChild(el);
+  };
+  add("feGaussianBlur", { in: "SourceAlpha", stdDeviation: size * 0.3, result: "bump" });
+  add("feDiffuseLighting", { in: "bump", surfaceScale: scale, diffuseConstant: 1, "lighting-color": "#fff", result: "diffuse" }, [["feDistantLight", { azimuth: 225, elevation: 52 }]]);
+  add("feSpecularLighting", { in: "bump", surfaceScale: scale, specularConstant: 1.4 * s, specularExponent: 26, "lighting-color": "#fff", result: "spec" }, [["feDistantLight", { azimuth: 225, elevation: 42 }]]);
+  add("feComposite", { in: "SourceGraphic", in2: "diffuse", operator: "arithmetic", k1: 0.8, k2: 0.38, k3: 0, k4: 0, result: "shaded" });
+  add("feComposite", { in: "spec", in2: "SourceAlpha", operator: "in", result: "highlight" });
+  add("feComposite", { in: "shaded", in2: "highlight", operator: "arithmetic", k1: 0, k2: 1, k3: 1, k4: 0 });
+  defs.appendChild(f);
+  return `url(#${id})`;
 }
 
 // Draws all hints as one SVG over the board.
@@ -115,46 +121,9 @@ function drawMarks(board, marks, animate = false) {
   const svg = svgEl("svg", { class: MARK, width: br.width, height: br.height, viewBox: `0 0 ${br.width} ${br.height}` });
   svg.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:20;overflow:visible";
 
-  // glossy style: a light-to-dark gradient per colour, a sheen along the arrows and a soft glow
-  const glossy = settings.hintStyle !== "flat";
-  const gid = ++glossCounter;
+  const glossy = settings.hintStyle !== "flat" && settings.gloss > 0;
   const defs = svgEl("defs", {});
   svg.appendChild(defs);
-  const gradients = {};
-  const gloss = (col) => {
-    if (!glossy) return col;
-    if (!gradients[col]) {
-      const id = `stockcrab-gloss-${gid}-${Object.keys(gradients).length}`;
-      const g = svgEl("linearGradient", { id, x1: 0, y1: 0, x2: 0, y2: 1 });
-      g.appendChild(svgEl("stop", { offset: 0, "stop-color": tint(col, 0.42) }));
-      g.appendChild(svgEl("stop", { offset: 0.5, "stop-color": col }));
-      g.appendChild(svgEl("stop", { offset: 1, "stop-color": tint(col, -0.28) }));
-      defs.appendChild(g);
-      gradients[col] = `url(#${id})`;
-    }
-    return gradients[col];
-  };
-  // a gradient across a stroke from its lit edge (x1, y1) to its far edge (x2, y2), in board pixels
-  let tubes = 0;
-  const tube = (col, x1, y1, x2, y2) => {
-    const id = `stockcrab-tube-${gid}-${tubes++}`;
-    const g = svgEl("linearGradient", { id, gradientUnits: "userSpaceOnUse", x1, y1, x2, y2 });
-    for (const [o, c] of [[0, tint(col, 0.1)], [0.14, tint(col, 0.72)], [0.27, tint(col, 0.32)], [0.55, col], [0.82, tint(col, -0.22)], [1, tint(col, -0.42)]])
-      g.appendChild(svgEl("stop", { offset: o, "stop-color": c }));
-    defs.appendChild(g);
-    return `url(#${id})`;
-  };
-  const glowId = `stockcrab-glow-${gid}`;
-  if (glossy && settings.glow > 0) {
-    const sd = (settings.glow / 10) * (br.width / 8) * 0.06;
-    const f = svgEl("filter", { id: glowId, x: "-50%", y: "-50%", width: "200%", height: "200%", "color-interpolation-filters": "sRGB" });
-    f.appendChild(svgEl("feGaussianBlur", { in: "SourceGraphic", stdDeviation: sd, result: "soft" }));
-    const merge = svgEl("feMerge", {});
-    merge.appendChild(svgEl("feMergeNode", { in: "soft" }));
-    merge.appendChild(svgEl("feMergeNode", { in: "SourceGraphic" }));
-    f.appendChild(merge);
-    defs.appendChild(f);
-  }
   const k = settings.lineWidth / 100;
   const infos = [];
   const allParts = [];
@@ -188,7 +157,6 @@ function drawMarks(board, marks, animate = false) {
     const op = (alt ? 0.68 : 1) * (settings.opacity / 100);
     // outlines and arrow of one move in one group
     const shape = svgEl("g", { opacity: op });
-    if (glossy && settings.glow > 0) shape.setAttribute("filter", `url(#${glowId})`);
     svg.appendChild(shape);
 
     if (settings.showOutline && !threat) {
@@ -196,7 +164,7 @@ function drawMarks(board, marks, animate = false) {
       for (const r of [from, to]) {
         const outline = svgEl("rect", {
           x: r.x + ow / 2, y: r.y + ow / 2, width: r.w - ow, height: r.h - ow,
-          fill: "none", stroke: gloss(m.kind === "premove" ? settings.colourPremove : settings.colourOutline), "stroke-width": ow, "stroke-linejoin": "miter",
+          fill: "none", stroke: m.kind === "premove" ? settings.colourPremove : settings.colourOutline, "stroke-width": ow, "stroke-linejoin": "miter",
         });
         shape.appendChild(outline);
         if (anim) animateIn(outline, [{ opacity: 0 }, { opacity: 1 }], 0, 160);
@@ -235,22 +203,12 @@ function drawMarks(board, marks, animate = false) {
       // the threat is dashed: it is not a move to play
       if (threat) line.setAttribute("stroke-dasharray", `${lw * 1.6} ${lw * 1.4}`);
       shape.appendChild(line);
-      // glossy: each straight piece of the arrow is shaded across its width like a glass tube, with a sharp
-      // highlight on the lit side and a shadow on the other; the flat line underneath fills the round joints
       if (glossy && !threat) {
-        for (let i = 1; i < pts.length; i++) {
-          const a0 = pts[i - 1], a1 = pts[i];
-          const l = Math.hypot(a1.x - a0.x, a1.y - a0.y);
-          if (!l) continue;
-          const [nx, ny] = litNormal((a1.x - a0.x) / l, (a1.y - a0.y) / l);
-          const mx = (a0.x + a1.x) / 2, my = (a0.y + a1.y) / 2, h = lw / 2;
-          const piece = svgEl("line", {
-            x1: a0.x, y1: a0.y, x2: a1.x, y2: a1.y, "stroke-linecap": "butt", "stroke-width": lw,
-            stroke: tube(col, mx + nx * h, my + ny * h, mx - nx * h, my - ny * h),
-          });
-          shape.appendChild(piece);
-          if (anim) animateIn(piece, [{ opacity: 0 }, { opacity: 1 }], 120, 120);
-        }
+        const xs = [from.x, from.x + from.w, to.x, to.x + to.w, ...pts.map((p) => p.x)];
+        const ys = [from.y, from.y + from.h, to.y, to.y + to.h, ...pts.map((p) => p.y)];
+        const pad = sq * 0.3;
+        const region = { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad, w: Math.max(...xs) - Math.min(...xs) + 2 * pad, h: Math.max(...ys) - Math.min(...ys) + 2 * pad };
+        shape.setAttribute("filter", glassFilter(defs, region, lw, settings.gloss));
       }
       if (anim && !threat) {
         let L = 0;
@@ -259,15 +217,9 @@ function drawMarks(board, marks, animate = false) {
       }
       if (hl) {
         const tip = { x: tc.x - ux * sq * 0.03, y: tc.y - uy * sq * 0.03 };
-        let headPaint = col;
-        if (glossy && !threat) {
-          const [nx, ny] = litNormal(ux, uy);
-          const cx = (tip.x + bx) / 2, cy = (tip.y + by) / 2;
-          headPaint = tube(col, cx + nx * hw, cy + ny * hw, cx - nx * hw, cy - ny * hw);
-        }
         const headEl = svgEl("polygon", {
           points: `${tip.x},${tip.y} ${bx - uy * hw},${by + ux * hw} ${bx + uy * hw},${by - ux * hw}`,
-          fill: headPaint, stroke: headPaint, "stroke-width": sq * 0.025, "stroke-linejoin": "round",
+          fill: col, stroke: col, "stroke-width": sq * 0.025, "stroke-linejoin": "round",
         });
         shape.appendChild(headEl);
         if (anim) animateIn(headEl, [{ opacity: 0, transform: "scale(0.5)", transformOrigin: `${tip.x}px ${tip.y}px` }, { transform: "scale(1)", transformOrigin: `${tip.x}px ${tip.y}px` }], 120, 150);
@@ -313,7 +265,7 @@ function drawMarks(board, marks, animate = false) {
         t.textContent = str;
         return t;
       };
-      const card = svgEl("rect", { fill: gloss(col), opacity: Math.min(1, op + 0.05) });
+      const card = svgEl("rect", { fill: col, opacity: Math.min(1, op + 0.05) });
       const t1 = score ? text(score, sq * (alt ? 0.125 : 0.14), 700) : null;
       const t2 = words ? text(words, sq * 0.09, 500, "opacity:.92") : null;
       svg.appendChild(card);
@@ -366,7 +318,7 @@ function drawMarks(board, marks, animate = false) {
         let w;
         try {
           w = t.getComputedTextLength();
-        } catch (e) {}
+        } catch {}
         return w || t.textContent.length * fs * 0.6;
       };
       const { t1, t2 } = c.card;
@@ -418,15 +370,7 @@ function drawMarks(board, marks, animate = false) {
       card.setAttribute("width", q.w);
       card.setAttribute("height", q.h);
       card.setAttribute("rx", sq * 0.05);
-      if (glossy) {
-        // the card's sheen: a light top half
-        const sheen = svgEl("rect", {
-          x: q.x + q.h * 0.06, y: q.y + q.h * 0.06, width: Math.max(0, q.w - q.h * 0.12), height: q.h * 0.42,
-          rx: sq * 0.04, fill: "#ffffff", opacity: 0.2,
-        });
-        card.after(sheen);
-        if (anim) animateIn(sheen, [{ opacity: 0 }, { opacity: 0.2 }], 150, 170);
-      }
+      if (glossy) card.setAttribute("filter", glassFilter(defs, { x: q.x - sq * 0.1, y: q.y - sq * 0.1, w: q.w + sq * 0.2, h: q.h + sq * 0.2 }, Math.min(q.h, sq * 0.3), settings.gloss));
       blurShape(q.x, q.y, q.w, q.h, `border-radius:${sq * 0.05}px`);
       let cy = q.y + padY;
       if (t1) {

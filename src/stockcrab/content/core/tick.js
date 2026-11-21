@@ -115,7 +115,7 @@ async function tick() {
     try {
       keepAlive = browser.runtime.connect();
       keepAlive.onDisconnect.addListener(() => (keepAlive = null));
-    } catch (e) {}
+    } catch {}
   }
   if (!mine && (!settings.premove || !searching(settings))) {
     setStatus(settings.premove ? "Opponent's turn · premoves need a calculating model" : "Opponent's turn");
@@ -208,7 +208,7 @@ async function showThreat(board, fen, id) {
       type: "hint", id, fen: tfen, elo: 3800, movetime: Math.min(1500, Math.max(400, Math.round(settings.movetime / 4))),
       multipv: 1, aggression: 0, hash: settings.hash, nnue: settings.useNnue, uci: (settings.uci || {})[settings.model],
     });
-  } catch (e) {}
+  } catch {}
   if (!res || res.id !== requestId || !lastView || lastView.fen !== fen || !settings.threat) return;
   const mark = threatMark(res, fen);
   if (!mark) return;

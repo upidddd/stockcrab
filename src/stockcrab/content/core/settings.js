@@ -59,13 +59,13 @@ const DEFAULTS = {
   lineWidth: 100,
   opacity: 70,
   blur: MOBILE ? 0 : 4, // px, 0 = off
-  hintStyle: "flat", // "flat" (with the blur under the hints) or "glossy" (glass-tube shading)
-  glow: 0, // a soft glow around glossy hints, 0 = off (it blurs the edges)
+  hintStyle: "flat", // "flat" or "glossy"
+  gloss: 60, // how strong the glossy lighting is, 0 - 100
   panelIcon: "", // the user's own picture for the panel's header (a data: PNG), empty = the crab
   showOutline: true,
   showHead: true,
   showLabels: true,
-  version: 7, // for migrations
+  version: 8, // for migrations
   animate: true,
   // panel
   theme: "auto", // "auto", "light" or "dark"
@@ -93,5 +93,5 @@ let lastView = null; // last answer, for redraws
 function save() {
   try {
     browser.storage.local.set({ stockcrab: settings });
-  } catch (e) {}
+  } catch {}
 }

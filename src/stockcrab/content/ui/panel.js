@@ -128,7 +128,7 @@ const SECTIONS = [
     { key: "lineWidth", type: "range", label: "Line width", min: 50, max: 200, step: 10, fmt: (v) => v + "%", fx: "render" },
     { key: "opacity", type: "range", label: "Opacity", min: 30, max: 100, step: 5, fmt: (v) => v + "%", fx: "render" },
     { key: "hintStyle", type: "select", label: "Hint style", opts: [["flat", "Flat"], ["glossy", "Glossy"]], fx: "render" },
-    { key: "glow", type: "range", label: "Glow", min: 0, max: 20, step: 1, fmt: (v) => (v ? v : "off"), fx: "render", when: (s) => s.hintStyle !== "flat" },
+    { key: "gloss", type: "range", label: "Gloss", min: 10, max: 100, step: 5, fx: "render", when: (s) => s.hintStyle !== "flat" },
     { key: "blur", type: "range", label: "Blur under the hints", min: 0, max: 12, step: 1, fmt: (v) => (v ? v + " px" : "off"), fx: "render", desktop: true },
     { key: "showOutline", type: "check", label: "Outline the squares", fx: "render" },
     { key: "showHead", type: "check", label: "Arrow head", fx: "render" },
@@ -603,7 +603,7 @@ function mountPanel() {
     let who = "?";
     try {
       who = myColour(getBoard());
-    } catch (e) {}
+    } catch {}
     await copyText(`${SITE} · I play ${who} · ${lastRead}`);
     const before = statusEl.textContent;
     statusEl.textContent = "Position copied";
@@ -746,7 +746,7 @@ async function loadOpeningNames() {
   try {
     const names = await browser.runtime.sendMessage({ type: "openings" });
     if (Array.isArray(names)) openingNames = ["Any book line", "Gambits", ...names];
-  } catch (e) {}
+  } catch {}
   return openingNames || ["Any book line", "Gambits"];
 }
 
@@ -810,7 +810,7 @@ async function loadUciOptions() {
   let list = null;
   try {
     list = await browser.runtime.sendMessage({ type: "options", model });
-  } catch (e) {}
+  } catch {}
   if (settings.model !== model) return;
   const mine = (settings.uci || {})[model] || {};
   const name = (MODEL_OPTIONS.find(([v]) => v === model) || [, model])[1];
@@ -905,7 +905,7 @@ async function onUpdateAction(act, shadow) {
   let r = null;
   try {
     r = await browser.runtime.sendMessage({ type: "install-update" });
-  } catch (e) {}
+  } catch {}
   if (r && r.ok) {
     msg.textContent = "Installing the update, StockCrab restarts in a moment";
     return;
@@ -1035,7 +1035,7 @@ function syncHud(r) {
 function sendEngineChoice() {
   try {
     browser.runtime.sendMessage({ type: "engine", which: settings.model }).catch(() => {});
-  } catch (e) {}
+  } catch {}
 }
 
 function setEnabled(on) {

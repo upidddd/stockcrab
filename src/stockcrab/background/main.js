@@ -12,7 +12,7 @@ function setEngine(which) {
   lastFen = null;
   try {
     engine.terminate();
-  } catch (e) {}
+  } catch {}
   requested = id;
   modelId = id;
   tried = new Set([id]);

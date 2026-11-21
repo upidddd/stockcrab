@@ -29,7 +29,7 @@ function injectPageScript() {
           b.setAttribute("data-sp-fen", f);
           b.setAttribute("data-sp-ts", String(Date.now()));
         }
-      } catch (e) {}
+      } catch {}
     });
   }, 150);`;
   (document.head || document.documentElement).appendChild(s);
@@ -119,7 +119,7 @@ function readFen(board) {
   try {
     const fen = board.wrappedJSObject?.game?.getFEN?.();
     if (typeof fen === "string") candidates.push(["game", String(fen)]);
-  } catch (e) {}
+  } catch {}
   const attr = board.getAttribute("data-sp-fen");
   const stamp = Number(board.getAttribute("data-sp-ts"));
   if (attr && Date.now() - stamp < 600) candidates.push(["page", attr]);

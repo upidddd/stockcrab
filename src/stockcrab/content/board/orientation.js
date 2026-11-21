@@ -19,7 +19,7 @@ function myColour(board) {
     const p = board.wrappedJSObject?.game?.getPlayingAs?.();
     if (p === 1) return "w";
     if (p === 2) return "b";
-  } catch (e) {}
+  } catch {}
   return bottomColour(board);
 }
 
