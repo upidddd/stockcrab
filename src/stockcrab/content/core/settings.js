@@ -90,8 +90,27 @@ let retryAt = 0;
 let current = null; // { marks, size } drawn now
 let lastView = null; // last answer, for redraws
 
+// Nothing is written before the saved settings were read, and only the settings that changed on this page are written,
+// on top of what the storage holds right now: a page that still has the defaults (or an old copy of the settings) cannot
+// wipe what another page saved.
+let settingsLoaded = false;
+let storedJson = {}; // per setting, what the storage held when this page last read or wrote it
+let writing = Promise.resolve();
+
 function save() {
+  if (!settingsLoaded) return;
   try {
-    browser.storage.local.set({ stockcrab: settings });
+    const changed = {};
+    for (const k of Object.keys(settings)) {
+      const json = JSON.stringify(settings[k]);
+      if (storedJson[k] === json) continue;
+      changed[k] = settings[k];
+      storedJson[k] = json;
+    }
+    if (!Object.keys(changed).length) return;
+    writing = writing
+      .then(() => browser.storage.local.get("stockcrab"))
+      .then((r) => browser.storage.local.set({ stockcrab: { ...(r && r.stockcrab), ...changed } }))
+      .catch(() => {});
   } catch {}
 }
